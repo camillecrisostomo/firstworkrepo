@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Landing Page</title>
+  <style>
+    .dropdown { position: relative; display: inline-block; }
+    .dropbtn { padding: 10px 16px; border-radius:6px; cursor:pointer; }
+    .dropdown-content {
+      display: none; position: absolute; min-width:180px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      background: #fff; border-radius:6px; z-index:100;
+    }
+    .dropdown:hover .dropdown-content { display:block; }
+    .dropdown-content a { display:block; padding:10px 12px; text-decoration:none; color:#333; }
+    .dropdown-content a:hover { background:#f0f0f0; }
+  </style>
+</head>
+<body>
+  <h1>Welcome</h1>
+
+  <div class="dropdown">
+    <button class="dropbtn">Register</button>
+    <div class="dropdown-content">
+      <!-- gumagamit ng `url` template tag para mag-navigate sa iba apps -->
+      <a href="{% url 'user:register' %}">Register as User</a>
+      <a href="{% url 'staff_url:register' %}">Register as Staff</a>
+      <a href="{% url 'admin_app:register' %}">Register as Admin</a>
+    </div>
+  </div>
+</body>
+</html>

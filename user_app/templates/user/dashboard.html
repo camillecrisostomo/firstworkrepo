@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard</title>
+</head>
+<body>
+  <div class="container mt-4">
+    <h3>Welcome, {{ request.user.username }}</h3>
+    <p>This is your landing/dashboard.</p>
+    <p><a href="{% url 'user:logout' %}">Logout</a></p>
+  </div>
+</body>
+</html>
