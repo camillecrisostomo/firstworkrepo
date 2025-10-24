@@ -2,33 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Registration</title>
-
-    <style>
-    .btn {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-      font-size: 16px;
-      border: none;
-      cursor: pointer;
-    }
-
-    .btn:hover {
-      background-color: #0056b3;
-    }
-  </style>
-
 </head>
 <body>
-    <h2>Staff Registration Page</h2>
+    <h2>Staff Registration</h2>
+    <form method="POST">
+        {% csrf_token %}
+        <label>Username:</label>
+        {{ form.username }} <br><br>
 
-        <button type="submit" class="btn">Register as Staff</button>
-        <a href="{% url 'landing' %}" class="btn">Go back</a>
-    
+        <label>Email:</label>
+        {{ form.email }} <br><br>
+
+        <label>Password:</label>
+        {{ form.password }} <br><br>
+
+        <label>Confirm Password:</label>
+        {{ form.confirm_password }} <br><br>
+
+        <button type="submit">Register</button>
+    </form>
+
+    <p>Already have an account? <a href="{% url 'staff_url:login' %}">Login</a></p>
 </body>
 </html>

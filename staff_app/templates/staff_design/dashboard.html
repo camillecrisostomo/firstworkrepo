@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Dashboard</title>
+</head>
+<body>
+    <h2>Welcome, {{ request.user.username }}</h2>
+    <p>Status: {{ request.user.staffprofile.status }}</p>
+
+    <p>This is your staff dashboard.</p>
+    <a href="{% url 'staff_url:logout' %}">Logout</a>
+</body>
+</html>

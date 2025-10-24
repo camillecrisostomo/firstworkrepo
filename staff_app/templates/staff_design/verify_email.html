@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Email</title>
+</head>
+<body>
+    <h2>Email Verification for {{ user.username }}</h2>
+    <p>A 6-digit verification code was sent to {{ user.email }}.</p>
+
+    <form method="POST">
+        {% csrf_token %}
+        <label>Verification Code:</label>
+        {{ form.code }} <br><br>
+        <button type="submit">Verify</button>
+    </form>
+
+    <a href="{% url 'staff_url:login' %}">Back to Login</a>
+</body>
+</html>
