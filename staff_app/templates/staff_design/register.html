@@ -5,24 +5,51 @@
     <title>Staff Registration</title>
 </head>
 <body>
-    <h2>Staff Registration</h2>
-    <form method="POST">
-        {% csrf_token %}
-        <label>Username:</label>
-        {{ form.username }} <br><br>
 
-        <label>Email:</label>
-        {{ form.email }} <br><br>
+{% include "nav.html" %}
 
-        <label>Password:</label>
-        {{ form.password }} <br><br>
+<h2>Staff Registration</h2>
 
-        <label>Confirm Password:</label>
-        {{ form.confirm_password }} <br><br>
+<form method="post" novalidate>
+    {% csrf_token %}
 
-        <button type="submit">Register</button>
-    </form>
+    <fieldset>
+        <legend>Personal Information</legend>
 
-    <p>Already have an account? <a href="{% url 'staff_url:login' %}">Login</a></p>
+        <label>First Name:</label><br>
+        <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}"><br><br>
+
+        <label>Middle Name:</label><br>
+        <input type="text" name="middle_name" value="{{ form.middle_name.value|default:'' }}"><br><br>
+
+        <label>Last Name:</label><br>
+        <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}"><br><br>
+    </fieldset>
+
+    <fieldset>
+        <legend>Account Information</legend>
+
+        <label>Email:</label><br>
+        <input type="email" name="email" value="{{ form.email.value|default:'' }}"><br><br>
+
+        <label>Password:</label><br>
+        <input type="password" name="password"><br><br>
+
+        <label>Confirm Password:</label><br>
+        <input type="password" name="confirm_password"><br><br>
+    </fieldset>
+
+    <button type="submit">Register</button>
+</form>
+
+<p><a href="{% url 'staff_url:login' %}">Already have an account? Login here</a></p>
+
+{% if form.errors %}
+    <div>
+        <h4>Form Errors:</h4>
+        <pre>{{ form.errors }}</pre>
+    </div>
+{% endif %}
+
 </body>
 </html>

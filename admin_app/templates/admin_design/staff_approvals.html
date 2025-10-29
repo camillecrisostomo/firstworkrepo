@@ -1,0 +1,89 @@
+<!-- admin_app/templates/admin_app/staff_approvals.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Staff Approvals</title>
+    <style>
+        body{font-family: Arial, sans-serif;padding:20px;background:#fff}
+        table{width:100%;border-collapse:collapse;margin-top:12px}
+        th,td{padding:8px;border:1px solid #e7e7e7}
+        th{background:#f2f2f2;text-align:left}
+        .inline{display:inline-block;margin:0}
+        .filters{margin-bottom:8px}
+        input[type="text"]{padding:6px}
+    </style>
+</head>
+<body>
+    <h1>Staff Approval List</h1>
+    <div style="margin-bottom:10px;">
+        <a href="{% url 'admin_url:dashboard' %}">Back to Dashboard</a> |
+        <a href="{% url 'admin_url:logout' %}">Logout</a>
+    </div>
+
+    <div class="filters">
+        <form method="get" style="display:inline;">
+            <label>Filter status:</label>
+            <select name="q">
+                <option value="">All</option>
+                <option value="Pending Verification" {% if filter == "Pending Verification" %}selected{% endif %}>Pending Verification</option>
+                <option value="Pending Admin Approval" {% if filter == "Pending Admin Approval" %}selected{% endif %}>Pending Admin Approval</option>
+                <option value="Approved" {% if filter == "Approved" %}selected{% endif %}>Approved</option>
+                <option value="Rejected" {% if filter == "Rejected" %}selected{% endif %}>Rejected</option>
+            </select>
+            <button type="submit">Apply</button>
+        </form>
+    </div>
+
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th>Admin Note</th>
+            <th>Action</th>
+        </tr>
+
+        {% for p in profiles %}
+            <tr>
+                <td>{{ p.user.get_full_name }}</td>
+                <td>{{ p.user.email }}</td>
+                <td>{{ p.status }}</td>
+                <td>{{ p.created_at }}</td>
+                <td>{{ p.admin_note }}</td>
+                <td>
+                    {% if p.status != "Approved" %}
+                        <form method="post" action="{% url 'admin_url:staff_approval_action' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="profile_id" value="{{ p.id }}">
+                            <input type="hidden" name="action" value="approve">
+                            <input type="text" name="admin_note" placeholder="note (optional)">
+                            <button type="submit">Approve</button>
+                        </form>
+                    {% endif %}
+                    {% if p.status != "Rejected" %}
+                        <form method="post" action="{% url 'admin_url:staff_approval_action' %}" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="profile_id" value="{{ p.id }}">
+                            <input type="hidden" name="action" value="reject">
+                            <input type="text" name="admin_note" placeholder="note (optional)">
+                            <button type="submit">Reject</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="6">No staff profiles found.</td></tr>
+        {% endfor %}
+    </table>
+
+    {% if messages %}
+        <div style="margin-top:12px;color:green;">
+            {% for m in messages %}
+                <div>{{ m }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</body>
+</html>

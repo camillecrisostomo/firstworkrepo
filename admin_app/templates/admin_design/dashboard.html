@@ -1,0 +1,44 @@
+<!-- admin_app/templates/admin_app/dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Admin Dashboard</title>
+    <style>
+        body{font-family: Arial, sans-serif;padding:20px;background:#fff}
+        .top{display:flex;justify-content:space-between;align-items:center}
+        .stats{display:flex;gap:12px;margin-top:16px}
+        .card{padding:14px;border-radius:6px;background:#f4f6f8;min-width:160px;text-align:center}
+        a{color:#0366d6;text-decoration:none}
+    </style>
+</head>
+<body>
+    <div class="top">
+        <h1>Admin Dashboard</h1>
+        <div>
+            <span>Logged in as {{ request.user.username }}</span> |
+            <a href="{% url 'admin_url:staff_approvals' %}">Manage Staff</a> |
+            <a href="{% url 'admin_url:logout' %}">Logout</a>
+        </div>
+    </div>
+
+    <div class="stats">
+        <div class="card">
+            <h4>Pending Verification</h4>
+            <div>{{ pending_verification }}</div>
+        </div>
+        <div class="card">
+            <h4>Pending Approval</h4>
+            <div>{{ pending_approval }}</div>
+        </div>
+        <div class="card">
+            <h4>Approved</h4>
+            <div>{{ approved }}</div>
+        </div>
+        <div class="card">
+            <h4>Rejected</h4>
+            <div>{{ rejected }}</div>
+        </div>
+    </div>
+</body>
+</html>

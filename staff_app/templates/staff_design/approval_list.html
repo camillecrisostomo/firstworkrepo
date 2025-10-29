@@ -1,0 +1,56 @@
+<!-- staff_app/templates/staff_design/approval_list.html -->
+
+<h3>Staff Approvals (Admin)</h3>
+
+<form method="get" class="mb-3">
+  <label>Filter by status:</label>
+  <select name="q" class="form-select w-auto d-inline-block">
+    <option value="">-- All --</option>
+    <option value="Pending Verification" {% if filter=="Pending Verification" %}selected{% endif %}>Pending Verification</option>
+    <option value="Pending Admin Approval" {% if filter=="Pending Admin Approval" %}selected{% endif %}>Pending Admin Approval</option>
+    <option value="Approved" {% if filter=="Approved" %}selected{% endif %}>Approved</option>
+    <option value="Rejected" {% if filter=="Rejected" %}selected{% endif %}>Rejected</option>
+  </select>
+  <button class="btn btn-secondary btn-sm">Filter</button>
+</form>
+
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Staff</th>
+      <th>Email</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in profiles %}
+      <tr>
+        <td>{{ p.user.get_full_name }}</td>
+        <td>{{ p.user.email }}</td>
+        <td>{{ p.status }}</td>
+        <td>{{ p.created_at }}</td>
+        <td>
+          <form method="post" action="{% url 'staff_url:approval_action' %}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="profile_id" value="{{ p.id }}">
+            <input type="hidden" name="action" value="approve">
+            <input type="text" name="admin_note" placeholder="Note (optional)" class="form-control mb-1">
+            <button class="btn btn-success btn-sm" type="submit">Approve</button>
+          </form>
+
+          <form method="post" action="{% url 'staff_url:approval_action' %}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="profile_id" value="{{ p.id }}">
+            <input type="hidden" name="action" value="reject">
+            <button class="btn btn-danger btn-sm" type="submit">Reject</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5" class="text-center">No staff found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+

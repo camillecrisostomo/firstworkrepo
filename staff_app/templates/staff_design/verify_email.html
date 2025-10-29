@@ -1,20 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Verify Email</title>
-</head>
-<body>
-    <h2>Email Verification for {{ user.username }}</h2>
-    <p>A 6-digit verification code was sent to {{ user.email }}.</p>
+<!-- staff_app/templates/staff_design/verify_email.html -->
 
-    <form method="POST">
-        {% csrf_token %}
-        <label>Verification Code:</label>
-        {{ form.code }} <br><br>
-        <button type="submit">Verify</button>
-    </form>
+<h3>Verify your email</h3>
+<p>We sent a verification code to <strong>{{ email }}</strong>. Enter it below.</p>
 
-    <a href="{% url 'staff_url:login' %}">Back to Login</a>
-</body>
-</html>
+<form method="post">
+  {% csrf_token %}
+  {{ form.email }}
+  <div class="mb-3">
+    <label>Verification Code</label>
+    <input class="form-control" name="code" maxlength="6" required>
+  </div>
+
+  <button class="btn btn-success" type="submit">Verify</button>
+</form>
+
+<form method="post" action="{% url 'staff_url:resend_code' %}" class="mt-3">
+  {% csrf_token %}
+  <input type="hidden" name="email" value="{{ email }}">
+  <button class="btn btn-outline-secondary" type="submit">Resend Code</button>
+</form>
+

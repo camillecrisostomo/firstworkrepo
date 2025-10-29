@@ -1,14 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Staff Dashboard</title>
-</head>
-<body>
-    <h2>Welcome, {{ request.user.username }}</h2>
-    <p>Status: {{ request.user.staffprofile.status }}</p>
+<!-- staff_app/templates/staff_design/dashboard.html -->
+<h3>Welcome, {{ request.user.first_name }} {{ request.user.last_name }}</h3>
+<p>Your email: {{ request.user.email }}</p>
+<p>Status: <strong>{{ profile.status }}</strong></p>
 
-    <p>This is your staff dashboard.</p>
-    <a href="{% url 'staff_url:logout' %}">Logout</a>
-</body>
-</html>
+<!-- Simple content -->
+<div class="mt-3">
+  <p>This is the staff dashboard. Add features as needed (tasks, shifts, etc.).</p>
+</div>
+
+<form method="post" action="{% url 'staff_url:logout' %}">
+  {% csrf_token %}
+  <button type="submit">Logout</button>
+</form>

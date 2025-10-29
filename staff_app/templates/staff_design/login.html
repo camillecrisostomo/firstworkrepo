@@ -5,20 +5,33 @@
     <title>Staff Login</title>
 </head>
 <body>
-    <h2>Staff Login</h2>
 
-    <form method="POST">
-        {% csrf_token %}
-        <label>Username:</label>
-        {{ form.username }} <br><br>
+{% include "nav.html" %}
 
-        <label>Password:</label>
-        {{ form.password }} <br><br>
+<h2>Staff Login</h2>
 
-        <button type="submit">Login</button>
-    </form>
+<!-- ✅ Message Display Block -->
+{% if messages %}
+    {% for message in messages %}
+        <p>{{ message }}</p>
+    {% endfor %}
+{% endif %}
 
-    <p><a href="{% url 'staff_url:forgot_password' %}">Forgot Password?</a></p>
-    <p>No account? <a href="{% url 'staff_url:register' %}">Register Here</a></p>
+<!-- ✅ Login Form -->
+<form method="post">
+    {% csrf_token %}
+    
+    <label>Email:</label><br>
+    <input type="email" name="email" value="{{ form.email.value|default:'' }}" required><br><br>
+    
+    <label>Password:</label><br>
+    <input type="password" name="password" required><br><br>
+    
+    <button type="submit">Login</button>
+</form>
+
+<p><a href="{% url 'staff_url:forgot_password' %}">Forgot password?</a></p>
+<p><a href="{% url 'staff_url:register' %}">Create an account</a></p>
+
 </body>
 </html>

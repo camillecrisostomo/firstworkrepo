@@ -1,133 +1,351 @@
+import random
+import string
+from datetime import timedelta
+from django.urls import reverse
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
+from django.contrib import messages
 from django.conf import settings
+from django.core.mail import send_mail
 from django.utils import timezone
-from datetime import timedelta
-import random, string
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 from .models import StaffProfile
-from .forms import StaffRegisterForm, VerificationForm, StaffLoginForm, ForgotPasswordForm
+from .forms import StaffRegisterForm, VerifyCodeForm, LoginForm, ForgotPasswordForm
+
+# =======================
+# Configuration constants
+# =======================
+VERIFICATION_CODE_LENGTH = 6
+RESEND_LIMIT = 5
+RESEND_COOLDOWN_SECONDS = 60  # seconds cooldown between sends
 
 
-# Helper: Generate 6-digit code
-def generate_code():
-    return ''.join(random.choices(string.digits, k=6))
+# =======================
+# Utility functions
+# =======================
+def _generate_code(length=VERIFICATION_CODE_LENGTH):
+    return ''.join(random.choices(string.digits, k=length))
 
 
-# REGISTER STAFF
+def _make_username(first, last):
+    base = f"{first.strip()}_{last.strip()}".lower().replace(' ', '')
+    username = base
+    i = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base}{i}"
+        i += 1
+    return username
+
+
+def _send_verification_email(user_email, full_name, code):
+    subject = "Staff Verification Code"
+    message = (
+        f"Hi {full_name},\n\n"
+        f"Your verification code is: {code}\n\n"
+        f"Enter this code on the verification page to complete registration.\n\n"
+        f"If you didn't request this, ignore this email."
+    )
+    from_email = settings.DEFAULT_FROM_EMAIL
+    send_mail(subject, message, from_email, [user_email], fail_silently=False)
+
+
+# =======================
+# Registration + Verification
+# =======================
 def register_staff(request):
     if request.method == 'POST':
         form = StaffRegisterForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.set_password(form.cleaned_data['password'])
-            user.is_active = False
-            user.save()
+            first = form.cleaned_data['first_name'].strip()
+            last = form.cleaned_data['last_name'].strip()
+            middle = form.cleaned_data.get('middle_name', '').strip()
+            email = form.cleaned_data['email'].lower()
+            password = form.cleaned_data['password']
 
-            code = generate_code()
-            StaffProfile.objects.create(user=user, verification_code=code)
+            username = _make_username(first, last)
 
-            send_mail(
-                "Staff Verification Code",
-                f"Your verification code is: {code}",
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
+            user = User.objects.create_user(
+                username=username,
+                first_name=first,
+                last_name=last,
+                email=email,
+                password=password,
+                is_active=True,
             )
 
-            messages.success(request, "A verification code has been sent to your email.")
-            return redirect('staff_url:verify_email', user_id=user.id)
+            # create staff profile
+            code = _generate_code()
+            now = timezone.now()
+            StaffProfile.objects.create(
+                user=user,
+                middle_name=middle,
+                verification_code=code,
+                is_verified=False,
+                resend_count=0,
+                code_sent_at=now,
+                status=StaffProfile.STATUS_PENDING_VERIFICATION,
+            )
+
+            # send email
+            try:
+                _send_verification_email(email, f"{first} {last}", code)
+            except Exception as e:
+                messages.error(request, f"Failed to send verification email: {e}")
+
+            messages.success(request, "Registered successfully. A verification code was sent to your email.")
+            return redirect(f"{reverse('staff_url:verify')}?email={email}")
     else:
         form = StaffRegisterForm()
 
     return render(request, 'staff_design/register.html', {'form': form})
 
 
-# VERIFY EMAIL
-def verify_email(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    staff = get_object_or_404(StaffProfile, user=user)
+def verify_code(request):
+    email = request.GET.get('email') or request.POST.get('email')
+    if not email:
+        messages.error(request, "Missing email to verify.")
+        return redirect('staff_url:register')
+
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
+        messages.error(request, "No registration found for that email.")
+        return redirect('staff_url:register')
+
+    profile = getattr(user, 'staff_profile', None)
+    if not profile:
+        messages.error(request, "Staff profile not found. Please register first.")
+        return redirect('staff_url:register')
 
     if request.method == 'POST':
-        form = VerificationForm(request.POST)
+        form = VerifyCodeForm(request.POST)
         if form.is_valid():
-            if form.cleaned_data['code'] == staff.verification_code:
-                staff.is_verified = True
-                user.is_active = True
-                staff.save()
-                user.save()
-                messages.success(request, "Email verified successfully! Awaiting admin approval.")
+            code = form.cleaned_data['code'].strip()
+            if profile.verification_code == code:
+                profile.is_verified = True
+                profile.status = StaffProfile.STATUS_PENDING_APPROVAL
+                profile.verification_code = ''
+                profile.save()
+                messages.success(request, "Email verified. Your account is now pending admin approval.")
                 return redirect('staff_url:login')
             else:
                 messages.error(request, "Invalid verification code.")
     else:
-        form = VerificationForm()
+        form = VerifyCodeForm(initial={'email': email})
 
-    return render(request, 'staff_design/verify_email.html', {'form': form, 'user': user})
+    return render(request, 'staff_design/verify_email.html', {'form': form, 'email': email})
 
 
-# LOGIN
+def resend_code(request):
+    if request.method != 'POST':
+        return redirect('staff_url:register')
+
+    email = request.POST.get('email')
+    user = User.objects.filter(email__iexact=email).first()
+    if not user:
+        messages.error(request, "No account with that email.")
+        return redirect('staff_url:register')
+
+    profile = getattr(user, 'staff_profile', None)
+    if not profile:
+        messages.error(request, "Profile not found.")
+        return redirect('staff_url:register')
+
+    # resend limits
+    if profile.resend_count >= RESEND_LIMIT:
+        messages.error(request, "You have reached the maximum number of resend attempts.")
+        return redirect(f"{reverse('staff_url:verify')}?email={email}")
+
+    now = timezone.now()
+    if profile.code_sent_at and (now - profile.code_sent_at) < timedelta(seconds=RESEND_COOLDOWN_SECONDS):
+        wait = RESEND_COOLDOWN_SECONDS - int((now - profile.code_sent_at).total_seconds())
+        messages.error(request, f"Please wait {wait} more seconds before resending.")
+        return redirect(f"{reverse('staff_url:verify')}?email={email}")
+
+    code = _generate_code()
+    profile.verification_code = code
+    profile.resend_count += 1
+    profile.code_sent_at = now
+    profile.save()
+
+    try:
+        _send_verification_email(user.email, user.get_full_name(), code)
+        messages.success(request, "Verification code resent to your email.")
+    except Exception as e:
+        messages.error(request, f"Failed to resend email: {e}")
+
+    return redirect(f"{reverse('staff_url:verify')}?email={email}")
+
+
+# =======================
+# Login / Logout / Dashboard
+# =======================
 def staff_login(request):
     if request.method == 'POST':
-        form = StaffLoginForm(request.POST)
+        form = LoginForm(request.POST)
         if form.is_valid():
-            user = authenticate(username=form.cleaned_data['username'], password=form.cleaned_data['password'])
-            if user:
-                staff = StaffProfile.objects.get(user=user)
-                if not staff.is_verified:
-                    messages.error(request, "Please verify your email first.")
-                elif staff.status == 'Pending':
+            email = form.cleaned_data['email'].lower()
+            password = form.cleaned_data['password']
+
+            user = User.objects.filter(email__iexact=email).first()
+            if not user:
+                messages.error(request, "Invalid credentials.")
+                return redirect('staff_url:login')
+
+            profile = getattr(user, 'staff_profile', None)
+            if not profile:
+                messages.error(request, "This email is not registered as staff.")
+                return redirect('staff_url:login')
+
+            if not profile.is_verified:
+                messages.error(request, "Your email is not verified yet. Please verify via the code sent to your email.")
+                return redirect(f"{reverse('staff_url:verify')}?email={email}")
+
+            if profile.status != StaffProfile.STATUS_APPROVED:
+                if profile.status == StaffProfile.STATUS_PENDING_APPROVAL:
                     messages.error(request, "Your account is still pending admin approval.")
-                elif staff.status == 'Rejected':
-                    messages.error(request, "Your account has been rejected by the admin.")
+                elif profile.status == StaffProfile.STATUS_REJECTED:
+                    messages.error(request, "Your account has been rejected. Contact administrator.")
                 else:
-                    login(request, user)
-                    return redirect('staff_url:dashboard')
-            else:
-                messages.error(request, "Invalid username or password.")
+                    messages.error(request, "You cannot log in at this time.")
+                return redirect('staff_url:login')
+
+            user_auth = authenticate(request, username=user.username, password=password)
+            if user_auth is None:
+                messages.error(request, "Invalid credentials.")
+                return redirect('staff_url:login')
+
+            login(request, user_auth)
+            messages.success(request, "Logged in as staff.")
+            return redirect('staff_url:dashboard')
+
     else:
-        form = StaffLoginForm()
+        form = LoginForm()
     return render(request, 'staff_design/login.html', {'form': form})
 
 
-# LOGOUT
+@login_required
 def staff_logout(request):
     logout(request)
+    messages.success(request, "Logged out.")
     return redirect('staff_url:login')
 
 
-# DASHBOARD
+@login_required
 def staff_dashboard(request):
-    return render(request, 'staff_design/dashboard.html')
+    profile = getattr(request.user, 'staff_profile', None)
+    if not profile or profile.status != StaffProfile.STATUS_APPROVED:
+        messages.error(request, "You are not allowed to access the staff dashboard.")
+        return redirect('staff_url:login')
+    return render(request, 'staff_design/dashboard.html', {'profile': profile})
 
 
-# FORGOT PASSWORD
+# =======================
+# Password Reset
+# =======================
 def forgot_password(request):
     if request.method == 'POST':
         form = ForgotPasswordForm(request.POST)
         if form.is_valid():
-            email = form.cleaned_data['email']
+            email = form.cleaned_data['email'].lower()
+            user = User.objects.filter(email__iexact=email).first()
+            if not user:
+                messages.error(request, "No account found with that email.")
+                return redirect('staff_url:forgot_password')
+
+            profile = getattr(user, 'staff_profile', None)
+            if not profile:
+                messages.error(request, "This email is not registered as staff.")
+                return redirect('staff_url:forgot_password')
+
+            temp_pw = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+            user.set_password(temp_pw)
+            user.save()
+
+            subject = "Staff Password Reset"
+            message = (
+                f"Hi {user.get_full_name()},\n\n"
+                f"A temporary password has been generated for your staff account:\n\n"
+                f"Temporary password: {temp_pw}\n\n"
+                f"Please log in and change your password immediately."
+            )
             try:
-                user = User.objects.get(email=email)
-                temp_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-                user.set_password(temp_pass)
-                user.save()
-                send_mail(
-                    "Temporary Password",
-                    f"Your temporary password is: {temp_pass}\nPlease login and change your password immediately.",
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                )
-                messages.success(request, "Temporary password sent to your email.")
+                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
+                messages.success(request, "A temporary password has been sent to your email.")
                 return redirect('staff_url:reset_success')
-            except User.DoesNotExist:
-                messages.error(request, "Email not found.")
+            except Exception as e:
+                messages.error(request, f"Failed to send email: {e}")
+                return redirect('staff_url:forgot_password')
     else:
         form = ForgotPasswordForm()
+
     return render(request, 'staff_design/forgot_password.html', {'form': form})
 
 
 def reset_success(request):
-    return render(request, 'staf_design/reset_success.html')
+    return render(request, 'staff_design/reset_success.html')
+
+
+# =======================
+# Admin Approval Views
+# =======================
+def _is_superuser(user):
+    return user.is_superuser
+
+
+@user_passes_test(_is_superuser)
+def staff_approvals(request):
+    q = request.GET.get('q')
+    if q:
+        profiles = StaffProfile.objects.filter(status__iexact=q).order_by('-created_at')
+    else:
+        profiles = StaffProfile.objects.all().order_by('-created_at')
+    return render(request, 'staff_design/approval_list.html', {'profiles': profiles, 'filter': q})
+
+
+@user_passes_test(_is_superuser)
+def staff_approval_action(request):
+    if request.method != 'POST':
+        return redirect('staff_url:approvals')
+
+    profile_id = request.POST.get('profile_id')
+    action = request.POST.get('action')
+    note = request.POST.get('admin_note', '')
+
+    profile = get_object_or_404(StaffProfile, id=profile_id)
+    if action == 'approve':
+        profile.status = StaffProfile.STATUS_APPROVED
+        profile.admin_note = note
+        profile.save()
+        try:
+            send_mail(
+                "Staff Account Approved",
+                f"Hi {profile.user.get_full_name()},\n\nYour staff account has been approved. You can now log in.",
+                settings.DEFAULT_FROM_EMAIL,
+                [profile.user.email],
+                fail_silently=True
+            )
+        except:
+            pass
+        messages.success(request, f"{profile.user.get_full_name()} approved.")
+    elif action == 'reject':
+        profile.status = StaffProfile.STATUS_REJECTED
+        profile.admin_note = note
+        profile.save()
+        try:
+            send_mail(
+                "Staff Account Rejected",
+                f"Hi {profile.user.get_full_name()},\n\nYour staff account has been rejected. Note: {note}",
+                settings.DEFAULT_FROM_EMAIL,
+                [profile.user.email],
+                fail_silently=True
+            )
+        except:
+            pass
+        messages.success(request, f"{profile.user.get_full_name()} rejected.")
+    else:
+        messages.error(request, "Unknown action.")
+
+    return redirect('staff_url:approvals')
