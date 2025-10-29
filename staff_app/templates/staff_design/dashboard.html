@@ -1,0 +1,14 @@
+<!-- staff_app/templates/staff_design/dashboard.html -->
+<h3>Welcome, {{ request.user.first_name }} {{ request.user.last_name }}</h3>
+<p>Your email: {{ request.user.email }}</p>
+<p>Status: <strong>{{ profile.status }}</strong></p>
+
+<!-- Simple content -->
+<div class="mt-3">
+  <p>This is the staff dashboard. Add features as needed (tasks, shifts, etc.).</p>
+</div>
+
+<form method="post" action="{% url 'staff_url:logout' %}">
+  {% csrf_token %}
+  <button type="submit">Logout</button>
+</form>

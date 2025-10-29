@@ -1,0 +1,26 @@
+<!-- admin_app/templates/admin_app/login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Admin Login</title>
+</head>
+<body>
+    {% include "nav.html" %}
+    <div class="card">
+        <h2>Admin Login</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Log in</button>
+        </form>
+        {% if messages %}
+            <div style="margin-top:12px;">
+                {% for m in messages %}
+                    <div style="color: {% if m.tags == 'error' %}#b33{% else %}#176e00{% endif %};">{{ m }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

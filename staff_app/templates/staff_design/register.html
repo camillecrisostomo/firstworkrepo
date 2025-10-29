@@ -2,33 +2,54 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Registration</title>
-
-    <style>
-    .btn {
-      display: inline-block;
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-      font-size: 16px;
-      border: none;
-      cursor: pointer;
-    }
-
-    .btn:hover {
-      background-color: #0056b3;
-    }
-  </style>
-
 </head>
 <body>
-    <h2>Staff Registration Page</h2>
 
-        <button type="submit" class="btn">Register as Staff</button>
-        <a href="{% url 'landing' %}" class="btn">Go back</a>
-    
+{% include "nav.html" %}
+
+<h2>Staff Registration</h2>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    <fieldset>
+        <legend>Personal Information</legend>
+
+        <label>First Name:</label><br>
+        <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}"><br><br>
+
+        <label>Middle Name:</label><br>
+        <input type="text" name="middle_name" value="{{ form.middle_name.value|default:'' }}"><br><br>
+
+        <label>Last Name:</label><br>
+        <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}"><br><br>
+    </fieldset>
+
+    <fieldset>
+        <legend>Account Information</legend>
+
+        <label>Email:</label><br>
+        <input type="email" name="email" value="{{ form.email.value|default:'' }}"><br><br>
+
+        <label>Password:</label><br>
+        <input type="password" name="password"><br><br>
+
+        <label>Confirm Password:</label><br>
+        <input type="password" name="confirm_password"><br><br>
+    </fieldset>
+
+    <button type="submit">Register</button>
+</form>
+
+<p><a href="{% url 'staff_url:login' %}">Already have an account? Login here</a></p>
+
+{% if form.errors %}
+    <div>
+        <h4>Form Errors:</h4>
+        <pre>{{ form.errors }}</pre>
+    </div>
+{% endif %}
+
 </body>
 </html>
