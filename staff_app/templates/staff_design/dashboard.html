@@ -1,4 +1,6 @@
 <!-- staff_app/templates/staff_design/dashboard.html -->
+{% include "staff_maintemp/nav.html" %}
+
 <h3>Welcome, {{ request.user.first_name }} {{ request.user.last_name }}</h3>
 <p>Your email: {{ request.user.email }}</p>
 <p>Status: <strong>{{ profile.status }}</strong></p>

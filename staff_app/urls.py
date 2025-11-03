@@ -16,4 +16,6 @@ urlpatterns = [
     # Admin approval views
     path('approvals/', views.staff_approvals, name='approvals'),  # list + filter
     path('approvals/action/', views.staff_approval_action, name='approval_action'),  # approve / reject
+
+    path('profile/', views.profile_view, name='profile'),
 ]
