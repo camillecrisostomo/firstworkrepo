@@ -5,8 +5,10 @@ from django.contrib import messages
 from django.utils import timezone
 from django.conf import settings
 from django.http import HttpResponseRedirect
+from django.views.decorators.http import require_http_methods
 from .forms import RegistrationForm, VerifyCodeForm, ForgotPasswordForm, LoginForm
-from .models import EmailVerification
+from .forms import UserUserForm, UserProfileForm, ChangePasswordForm
+from .models import EmailVerification, UserProfile
 from django.contrib.auth.models import User
 import random
 import string
@@ -16,6 +18,15 @@ from django.urls import reverse
 # helper
 def generate_code(n=6):
     return ''.join(random.choices(string.digits, k=n))
+
+def _make_username(first, last):
+    base = f"{first.strip()}_{last.strip()}".lower().replace(' ', '')
+    username = base
+    i = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base}{i}"
+        i += 1
+    return username
 
 def send_verification_email(user, code):
     subject = "Your verification code"
@@ -27,11 +38,31 @@ def register_view(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            username = form.cleaned_data['username']
+            first = form.cleaned_data['first_name'].strip()
+            middle = form.cleaned_data.get('middle_name', '').strip()
+            last = form.cleaned_data['last_name'].strip()
             email = form.cleaned_data['email'].lower()
             password = form.cleaned_data['password']
+            
+            # Generate username from first and last name
+            username = _make_username(first, last)
+            
             # create inactive user
-            user = User.objects.create_user(username=username, email=email, password=password, is_active=False)
+            user = User.objects.create_user(
+                username=username,
+                first_name=first,
+                last_name=last,
+                email=email,
+                password=password,
+                is_active=False
+            )
+            
+            # create user profile with middle name
+            UserProfile.objects.create(
+                user=user,
+                middle_name=middle
+            )
+            
             # create code
             code = generate_code()
             verif = EmailVerification.objects.create(user=user, code=code)
@@ -94,21 +125,19 @@ def resend_code_view(request, user_id):
 
 def login_view(request):
     if request.method == 'POST':
-        form = LoginForm(request, data=request.POST)
+        form = LoginForm(request.POST)
         if form.is_valid():
-            username_input = form.cleaned_data.get('username')
+            email = form.cleaned_data.get('email').lower()
             password = form.cleaned_data.get('password')
-            # allow login by email too
-            user = None
-            if '@' in username_input:
-                try:
-                    user_obj = User.objects.get(email=username_input.lower())
-                    username = user_obj.username
-                    user = authenticate(request, username=username, password=password)
-                except User.DoesNotExist:
-                    user = None
-            else:
-                user = authenticate(request, username=username_input, password=password)
+            
+            # Find user by email
+            try:
+                user_obj = User.objects.get(email=email)
+                username = user_obj.username
+                user = authenticate(request, username=username, password=password)
+            except User.DoesNotExist:
+                user = None
+            
             if user is not None:
                 if not user.is_active:
                     messages.error(request, "Account not verified. Please verify your email first.")
@@ -151,3 +180,70 @@ def forgot_password_view(request):
             messages.success(request, "A temporary password has been sent to your email.")
             return redirect('user:login')
     return redirect('user:login')
+
+# =======================
+# Profile View
+# =======================
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def profile_view(request):
+    """
+    View to show and edit user profile (User + UserProfile).
+    Save button is disabled by default in template; client-side JS enables it when any change occurs.
+    """
+    user = request.user
+
+    # Ensure profile exists; if not, create one with default image
+    profile, created = UserProfile.objects.get_or_create(user=user)
+    # (created True means newly created -- default image will be used)
+
+    if request.method == 'POST':
+        user_form = UserUserForm(request.POST, instance=user)
+        profile_form = UserProfileForm(request.POST, request.FILES, instance=profile)
+        password_form = ChangePasswordForm(request.POST)
+        
+        # Validate all forms
+        user_valid = user_form.is_valid()
+        profile_valid = profile_form.is_valid()
+        password_valid = password_form.is_valid()
+        
+        if user_valid and profile_valid and password_valid:
+            # Validate email uniqueness (if user changed email)
+            new_email = user_form.cleaned_data.get('email').lower()
+            if User.objects.filter(email__iexact=new_email).exclude(pk=user.pk).exists():
+                user_form.add_error('email', 'This email is already used by another account.')
+            else:
+                # Save user fields
+                u = user_form.save(commit=False)
+                u.email = new_email
+                u.save()
+                
+                # Save profile (handles profile_image)
+                profile_form.save()
+                
+                # Handle password change (if provided)
+                new_password = password_form.cleaned_data.get('password')
+                if new_password:
+                    u.set_password(new_password)
+                    u.save()
+                    messages.success(request, "Profile and password updated successfully.")
+                else:
+                    messages.success(request, "Profile updated successfully.")
+                
+                # Redirect to avoid resubmission and to reflect new image url
+                return redirect('user:profile')
+        else:
+            # Let template show form errors
+            messages.error(request, "Please fix the errors below.")
+    else:
+        user_form = UserUserForm(instance=user)
+        profile_form = UserProfileForm(instance=profile)
+        password_form = ChangePasswordForm()
+
+    return render(request, 'user/profile.html', {
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'password_form': password_form,
+        'profile': profile,  # for template convenience
+    })

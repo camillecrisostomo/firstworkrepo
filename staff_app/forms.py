@@ -2,6 +2,7 @@
 from django import forms
 from django.contrib.auth.models import User
 import re
+from .models import StaffProfile
 
 class StaffRegisterForm(forms.Form):
     first_name = forms.CharField(max_length=30, required=True)
@@ -48,3 +49,53 @@ class LoginForm(forms.Form):
 
 class ForgotPasswordForm(forms.Form):
     email = forms.EmailField(required=True)
+
+# ADDED: UserModelForm to edit User fields (first_name, last_name, email)
+class StaffUserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']
+        widgets = {
+            'email': forms.EmailInput(attrs={'readonly': False}),
+        }
+        # You can add custom clean_email to prevent duplicates if you want
+
+# ADDED: Form for changing password in profile
+class ChangePasswordForm(forms.Form):
+    password = forms.CharField(widget=forms.PasswordInput, required=False)
+    confirm_password = forms.CharField(widget=forms.PasswordInput, required=False)
+    
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        # If password is provided, validate it
+        if password:
+            if len(password) < 8:
+                raise forms.ValidationError("Password must be at least 8 characters.")
+            if not re.search(r'[A-Z]', password):
+                raise forms.ValidationError("Password must contain at least one uppercase letter.")
+            if not re.search(r'[a-z]', password):
+                raise forms.ValidationError("Password must contain at least one lowercase letter.")
+            if not re.search(r'\d', password):
+                raise forms.ValidationError("Password must contain at least one digit.")
+        return password
+    
+    def clean(self):
+        cleaned = super().clean()
+        pw = cleaned.get('password')
+        cpw = cleaned.get('confirm_password')
+        # Only validate if at least one password field is filled
+        if pw or cpw:
+            if not pw or not cpw:
+                raise forms.ValidationError("Both password fields must be filled.")
+            if pw != cpw:
+                raise forms.ValidationError("Passwords do not match.")
+        return cleaned
+
+# ADDED: ModelForm for StaffProfile (middle_name, profile_image)
+class StaffProfileForm(forms.ModelForm):
+    class Meta:
+        model = StaffProfile
+        fields = ['middle_name', 'profile_image']
+        widgets = {
+            'middle_name': forms.TextInput(),
+        }

@@ -11,9 +11,11 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_http_methods
 
 from .models import StaffProfile
 from .forms import StaffRegisterForm, VerifyCodeForm, LoginForm, ForgotPasswordForm
+from .forms import StaffUserForm, StaffProfileForm
 
 # =======================
 # Configuration constants
@@ -357,5 +359,46 @@ def staff_approval_action(request):
 # Profile Views
 # =======================
 
+@login_required
+@require_http_methods(["GET", "POST"])
 def profile_view(request):
-    return render(request, 'staff_design/profile.html')
+    """
+    View to show and edit staff profile (User + StaffProfile).
+    Save button is disabled by default in template; client-side JS enables it when any change occurs.
+    """
+    user = request.user
+
+    # Ensure profile exists; if not, create one with default image
+    profile, created = StaffProfile.objects.get_or_create(user=user)
+    # (created True means newly created -- default image will be used)
+
+    if request.method == 'POST':
+        user_form = StaffUserForm(request.POST, instance=user)
+        profile_form = StaffProfileForm(request.POST, request.FILES, instance=profile)
+        if user_form.is_valid() and profile_form.is_valid():
+            # Validate email uniqueness (if user changed email)
+            new_email = user_form.cleaned_data.get('email').lower()
+            if User.objects.filter(email__iexact=new_email).exclude(pk=user.pk).exists():
+                user_form.add_error('email', 'This email is already used by another account.')
+            else:
+                # Save user fields
+                u = user_form.save(commit=False)
+                u.email = new_email
+                u.save()
+                # Save profile (handles profile_image)
+                profile_form.save()
+                messages.success(request, "Profile updated successfully.")
+                # Redirect to avoid resubmission and to reflect new image url
+                return redirect('staff_url:profile')
+        else:
+            # Let template show form errors
+            messages.error(request, "Please fix the errors below.")
+    else:
+        user_form = StaffUserForm(instance=user)
+        profile_form = StaffProfileForm(instance=profile)
+
+    return render(request, 'staff_design/profile.html', {
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'profile': profile,  # for template convenience
+    })

@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Profile</title>
+    <title>User Profile</title>
 </head>
 <body>
 
-{% include "staff_maintemp/nav.html" %}
+{% include "user_maintemp/nav.html" %}
 
 <h1>Profile</h1>
 
@@ -178,7 +178,7 @@
     
     <p>
         <button id="saveBtn" type="submit" disabled>Save Changes</button>
-        <a href="{% url 'staff_url:dashboard' %}">Cancel</a>
+        <a href="{% url 'user:dashboard' %}">Cancel</a>
     </p>
 </form>
 

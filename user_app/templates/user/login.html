@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Login</title>
@@ -10,13 +10,35 @@
 
   {% if messages %}
     {% for m in messages %}
-      <p>{{ m }}</p>
+      <div>
+        <strong>{{ m }}</strong>
+      </div>
     {% endfor %}
   {% endif %}
 
   <form method="post" novalidate>
     {% csrf_token %}
-    {{ form.as_p }}
+    
+    <label for="id_email">Email:</label><br>
+    <input type="email" name="email" id="id_email" value="{{ form.email.value|default:'' }}" required><br>
+    {% if form.email.errors %}
+      <ul>
+        {% for error in form.email.errors %}
+          <li><strong>{{ error }}</strong></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <label for="id_password">Password:</label><br>
+    <input type="password" name="password" id="id_password" required><br>
+    {% if form.password.errors %}
+      <ul>
+        {% for error in form.password.errors %}
+          <li><strong>{{ error }}</strong></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
     <button type="submit">Login</button>
   </form>
 

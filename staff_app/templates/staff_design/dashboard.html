@@ -10,7 +10,5 @@
   <p>This is the staff dashboard. Add features as needed (tasks, shifts, etc.).</p>
 </div>
 
-<form method="post" action="{% url 'staff_url:logout' %}">
-  {% csrf_token %}
-  <button type="submit">Logout</button>
-</form>
+<hr>
+{% include "staff_maintemp/footer.html" %}
