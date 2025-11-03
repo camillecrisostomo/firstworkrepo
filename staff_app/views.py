@@ -161,6 +161,7 @@ def resend_code(request):
     now = timezone.now()
     if profile.code_sent_at and (now - profile.code_sent_at) < timedelta(seconds=RESEND_COOLDOWN_SECONDS):
         wait = RESEND_COOLDOWN_SECONDS - int((now - profile.code_sent_at).total_seconds())
+        wait = max(wait, 1)
         messages.error(request, f"Please wait {wait} more seconds before resending.")
         return redirect(f"{reverse('staff_url:verify')}?email={email}")
 
@@ -295,6 +296,7 @@ def _is_superuser(user):
     return user.is_superuser
 
 
+@login_required
 @user_passes_test(_is_superuser)
 def staff_approvals(request):
     q = request.GET.get('q')
@@ -305,6 +307,7 @@ def staff_approvals(request):
     return render(request, 'staff_design/approval_list.html', {'profiles': profiles, 'filter': q})
 
 
+@login_required
 @user_passes_test(_is_superuser)
 def staff_approval_action(request):
     if request.method != 'POST':
@@ -349,3 +352,10 @@ def staff_approval_action(request):
         messages.error(request, "Unknown action.")
 
     return redirect('staff_url:approvals')
+
+# =======================
+# Profile Views
+# =======================
+
+def profile_view(request):
+    return render(request, 'staff_design/profile.html')
