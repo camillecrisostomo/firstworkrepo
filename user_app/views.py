@@ -15,6 +15,9 @@ import string
 from django.core.mail import send_mail
 from django.urls import reverse
 
+#ADDED FOR JOB POSTING
+from staff_app.models import JobPost
+
 # helper
 def generate_code(n=6):
     return ''.join(random.choices(string.digits, k=n))
@@ -247,3 +250,20 @@ def profile_view(request):
         'password_form': password_form,
         'profile': profile,  # for template convenience
     })
+
+
+#ADDED FOR JOB POSTING
+def career_search(request):
+    # show only non-archived posts
+    query = request.GET.get('q', '')
+    posts = JobPost.objects.filter(archived=False).order_by('-post_date')
+    if query:
+        posts = posts.filter(title__icontains=query)  # simple search; extend as needed
+
+    # Only show brief fields in the list
+    return render(request, 'user/career_search.html', {'posts': posts, 'query': query})
+
+
+def job_detail(request, job_number):
+    post = get_object_or_404(JobPost, job_number=job_number, archived=False)
+    return render(request, 'user/job_detail.html', {'post': post})

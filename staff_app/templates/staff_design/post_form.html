@@ -1,0 +1,11 @@
+{% extends "staff_maintemp/nav.html" %}
+{% block content %}
+<div class="container">
+  <h2>{% if create %}Create Job Post{% else %}Edit Job Post{% endif %}</h2>
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">{% if create %}Post Job{% else %}Save Changes{% endif %}</button>
+    <a href="{% url 'staff_url:post_list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

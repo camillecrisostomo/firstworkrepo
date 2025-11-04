@@ -1,0 +1,26 @@
+{% extends "user_maintemp/nav.html" %}
+
+{% block content %}
+<div class="container">
+  <h2>Career / Job Listings</h2>
+  <form method="get" class="mb-3">
+    <input type="text" name="q" placeholder="Search title..." value="{{ query }}">
+    <button type="submit">Search</button>
+  </form>
+
+  {% if posts %}
+    <ul class="list-group">
+      {% for p in posts %}
+        <li class="list-group-item">
+          <strong>{{ p.title }}</strong> — {{ p.position_title }} | {{ p.get_job_type_display }} | {{ p.experience }}
+          <a href="{% url 'user:job_detail' p.job_number %}" class="btn btn-sm btn-outline-primary float-end">
+            Read full job description
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No jobs found.</p>
+  {% endif %}
+</div>
+{% endblock %}

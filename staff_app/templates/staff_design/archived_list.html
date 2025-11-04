@@ -1,0 +1,32 @@
+{% extends "staff_maintemp/nav.html" %}
+{% block content %}
+<div class="container">
+  <h2>Archived Jobs</h2>
+  <a href="{% url 'staff_url:post_list' %}" class="btn btn-secondary">Back to Posts</a>
+  <hr>
+  {% if archives %}
+    <table class="table">
+      <thead><tr>
+        <th>Job #</th><th>Title</th><th>Archived Date</th><th>Reason</th>
+      </tr></thead>
+      <tbody>
+        {% for a in archives %}
+          <tr>
+            <td>{{ a.job_number }}</td>
+            <td>{{ a.title }}</td>
+            <td>{{ a.archived_date|date:"Y-m-d" }}</td>
+            <td>
+              {{ a.get_archive_reason_display }}
+              {% if a.archive_reason == 'other' and a.archive_reason_other %}
+                - {{ a.archive_reason_other }}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No archived jobs.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "staff_maintemp/nav.html" %}
+{% block content %}
+<div class="container">
+  <h2>My Job Posts</h2>
+  <a href="{% url 'staff_url:post_create' %}" class="btn btn-primary">Create New Job Post</a>
+  <a href="{% url 'staff_url:archived_list' %}" class="btn btn-secondary">Archived Posts</a>
+  <hr>
+  {% if posts %}
+    <table class="table">
+      <thead><tr>
+        <th>Job Number</th><th>Title</th><th>Position</th><th>Type</th><th>Experience</th><th>Posted</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        {% for p in posts %}
+          <tr>
+            <td>{{ p.job_number }}</td>
+            <td>{{ p.title }}</td>
+            <td>{{ p.position_title }}</td>
+            <td>{{ p.get_job_type_display }}</td>
+            <td>{{ p.experience }}</td>
+            <td>{{ p.post_date|date:"Y-m-d" }}</td>
+            <td>
+              <a href="{% url 'staff_url:post_edit' p.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+              <a href="{% url 'staff_url:post_archive' p.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+              <a href="{% url 'staff_url:post_delete' p.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No job posts yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

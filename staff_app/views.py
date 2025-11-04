@@ -17,6 +17,10 @@ from .models import StaffProfile
 from .forms import StaffRegisterForm, VerifyCodeForm, LoginForm, ForgotPasswordForm
 from .forms import StaffUserForm, StaffProfileForm, ChangePasswordForm
 
+#ADDED FOR JOB POSTING
+from .forms import JobPostForm, ArchiveForm, DeleteForm
+from .models import JobPost, ArchivedJob, DeletionLog
+
 # =======================
 # Configuration constants
 # =======================
@@ -413,3 +417,123 @@ def profile_view(request):
         'password_form': password_form,  # ✅ added
         'profile': profile,
     })
+
+#ADDED FOR JOB POSTING
+# NOTE: Adjust permission check depending on your StaffProfile/admin approval system.
+def staff_permission_required(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('user:login')  # adjust namespace if different
+        # If you have StaffProfile with status field, use it here:
+        # if not hasattr(request.user, 'staffprofile') or request.user.staffprofile.status != 'approved':
+        #     messages.error(request, 'You are not allowed to access this page.')
+        #     return redirect('staff_url:dashboard')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+
+@login_required
+@staff_permission_required
+def post_list(request):
+    posts = JobPost.objects.filter(staff=request.user, archived=False).order_by('-post_date')
+    return render(request, 'staff_design/post_list.html', {'posts': posts})
+
+
+@login_required
+@staff_permission_required
+def post_create(request):
+    if request.method == 'POST':
+        form = JobPostForm(request.POST)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.staff = request.user
+            post.save()
+            messages.success(request, 'Job post created.')
+            return redirect('staff_url:post_list')
+    else:
+        form = JobPostForm()
+    return render(request, 'staff_design/post_form.html', {'form': form, 'create': True})
+
+
+@login_required
+@staff_permission_required
+def post_edit(request, pk):
+    post = get_object_or_404(JobPost, pk=pk, staff=request.user)
+    if request.method == 'POST':
+        form = JobPostForm(request.POST, instance=post)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Job post updated.')
+            return redirect('staff_url:post_list')
+    else:
+        form = JobPostForm(instance=post)
+    return render(request, 'staff_design/post_form.html', {'form': form, 'create': False, 'post': post})
+
+
+@login_required
+@staff_permission_required
+def post_archive(request, pk):
+    post = get_object_or_404(JobPost, pk=pk, staff=request.user, archived=False)
+    if request.method == 'POST':
+        form = ArchiveForm(request.POST)
+        if form.is_valid():
+            reason = form.cleaned_data['reason']
+            other = form.cleaned_data['other_reason']
+            # create ArchivedJob
+            archived = ArchivedJob.objects.create(
+                original_id=post.id,
+                staff=post.staff,
+                title=post.title,
+                position_title=post.position_title,
+                job_type=post.job_type,
+                experience=post.experience,
+                job_number=post.job_number,
+                job_description=post.job_description,
+                qualification=post.qualification,
+                location=post.location,
+                additional_info=post.additional_info,
+                about_company=post.about_company,
+                post_date=post.post_date,
+                archive_reason=reason,
+                archive_reason_other=other if reason == 'other' else ''
+            )
+            post.archived = True
+            post.save()
+            messages.success(request, 'Job archived.')
+            return redirect('staff_url:post_list')
+    else:
+        form = ArchiveForm()
+    return render(request, 'staff_design/post_confirm_archive.html', {'form': form, 'post': post})
+
+
+@login_required
+@staff_permission_required
+def post_delete(request, pk):
+    post = get_object_or_404(JobPost, pk=pk, staff=request.user)
+    if request.method == 'POST':
+        form = DeleteForm(request.POST)
+        if form.is_valid():
+            reason = form.cleaned_data['reason']
+            other = form.cleaned_data['other_reason']
+            # save deletion log
+            DeletionLog.objects.create(
+                job_number=post.job_number,
+                title=post.title,
+                staff_username=post.staff.username,
+                delete_reason=reason,
+                delete_reason_other=other if reason == 'other' else ''
+            )
+            post.delete()
+            messages.success(request, 'Job post deleted.')
+            return redirect('staff_url:post_list')
+    else:
+        form = DeleteForm()
+    return render(request, 'staff_design/post_confirm_delete.html', {'form': form, 'post': post})
+
+
+@login_required
+@staff_permission_required
+def archived_list(request):
+    archives = ArchivedJob.objects.filter(staff=request.user).order_by('-archived_date')
+    return render(request, 'staff_design/archived_list.html', {'archives': archives})

@@ -2,7 +2,7 @@
 from django import forms
 from django.contrib.auth.models import User
 import re
-from .models import StaffProfile
+from .models import StaffProfile, JobPost, REASON_CHOICES
 
 class StaffRegisterForm(forms.Form):
     first_name = forms.CharField(max_length=30, required=True)
@@ -99,3 +99,44 @@ class StaffProfileForm(forms.ModelForm):
         widgets = {
             'middle_name': forms.TextInput(),
         }
+
+class JobPostForm(forms.ModelForm):
+    class Meta:
+        model = JobPost
+        fields = [
+            'title', 'position_title', 'job_type', 'experience',
+            'job_description', 'qualification', 'location',
+            'additional_info', 'about_company'
+        ]
+        widgets = {
+            'job_description': forms.Textarea(attrs={'rows':4}),
+            'qualification': forms.Textarea(attrs={'rows':3}),
+            'additional_info': forms.Textarea(attrs={'rows':2}),
+            'about_company': forms.Textarea(attrs={'rows':3}),
+        }
+
+
+class ArchiveForm(forms.Form):
+    reason = forms.ChoiceField(choices=REASON_CHOICES)
+    other_reason = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows':2}))
+
+    def clean(self):
+        cleaned = super().clean()
+        r = cleaned.get('reason')
+        other = cleaned.get('other_reason')
+        if r == 'other' and not other:
+            raise forms.ValidationError('Please specify the reason for "Other".')
+        return cleaned
+
+#ADDED FOR JOB POSTING
+class DeleteForm(forms.Form):
+    reason = forms.ChoiceField(choices=REASON_CHOICES)
+    other_reason = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows':2}))
+
+    def clean(self):
+        cleaned = super().clean()
+        r = cleaned.get('reason')
+        other = cleaned.get('other_reason')
+        if r == 'other' and not other:
+            raise forms.ValidationError('Please specify the reason for "Other".')
+        return cleaned

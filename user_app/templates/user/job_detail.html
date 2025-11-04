@@ -1,0 +1,34 @@
+{% extends "user_maintemp/nav.html" %}
+{% block content %}
+
+<div class="container">
+  <h2>{{ post.title }}</h2>
+  <p><strong>Job Number:</strong> {{ post.job_number }}</p>
+  <p><strong>Position:</strong> {{ post.position_title }}</p>
+  <p><strong>Type:</strong> {{ post.get_job_type_display }}</p>
+  <p><strong>Experience:</strong> {{ post.experience }}</p>
+  <hr>
+  <h4>Job Description</h4>
+  <p>{{ post.job_description|linebreaks }}</p>
+
+  <h4>Qualification</h4>
+  <p>{{ post.qualification|linebreaks }}</p>
+
+  <h4>Location</h4>
+  <p>{{ post.location }}</p>
+
+  {% if post.additional_info %}
+    <h4>Additional Information</h4>
+    <p>{{ post.additional_info|linebreaks }}</p>
+  {% endif %}
+
+  {% if post.about_company %}
+    <h4>About Company</h4>
+    <p>{{ post.about_company|linebreaks }}</p>
+  {% endif %}
+
+  <p><small>Posted: {{ post.post_date|date:"Y-m-d H:i" }}</small></p>
+  <a href="{% url 'user:career_search' %}" class="btn btn-secondary">Back to listings</a>
+</div>
+
+{% endblock %}

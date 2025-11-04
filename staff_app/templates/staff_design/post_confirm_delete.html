@@ -1,0 +1,12 @@
+{% extends "staff_maintemp/nav.html" %}
+{% block content %}
+<div class="container">
+  <h2>Delete Job: {{ post.title }}</h2>
+  <p>Job Number: {{ post.job_number }}</p>
+  <form method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-danger">Delete Permanently</button>
+    <a href="{% url 'staff_url:post_list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

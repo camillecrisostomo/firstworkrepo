@@ -18,4 +18,12 @@ urlpatterns = [
     path('approvals/action/', views.staff_approval_action, name='approval_action'),  # approve / reject
 
     path('profile/', views.profile_view, name='profile'),
+
+    #ADDED FOR JOB POSTING
+    path('posts/', views.post_list, name='post_list'),
+    path('posts/create/', views.post_create, name='post_create'),
+    path('posts/<int:pk>/edit/', views.post_edit, name='post_edit'),
+    path('posts/<int:pk>/archive/', views.post_archive, name='post_archive'),
+    path('posts/<int:pk>/delete/', views.post_delete, name='post_delete'),
+    path('posts/archived/', views.archived_list, name='archived_list'),
 ]
