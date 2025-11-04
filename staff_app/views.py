@@ -15,7 +15,7 @@ from django.views.decorators.http import require_http_methods
 
 from .models import StaffProfile
 from .forms import StaffRegisterForm, VerifyCodeForm, LoginForm, ForgotPasswordForm
-from .forms import StaffUserForm, StaffProfileForm
+from .forms import StaffUserForm, StaffProfileForm, ChangePasswordForm
 
 # =======================
 # Configuration constants
@@ -364,41 +364,52 @@ def staff_approval_action(request):
 def profile_view(request):
     """
     View to show and edit staff profile (User + StaffProfile).
-    Save button is disabled by default in template; client-side JS enables it when any change occurs.
+    Includes change password functionality.
     """
     user = request.user
-
-    # Ensure profile exists; if not, create one with default image
     profile, created = StaffProfile.objects.get_or_create(user=user)
-    # (created True means newly created -- default image will be used)
 
     if request.method == 'POST':
         user_form = StaffUserForm(request.POST, instance=user)
         profile_form = StaffProfileForm(request.POST, request.FILES, instance=profile)
-        if user_form.is_valid() and profile_form.is_valid():
-            # Validate email uniqueness (if user changed email)
+        password_form = ChangePasswordForm(request.POST)  # ✅ added
+
+        # Validate all three
+        if user_form.is_valid() and profile_form.is_valid() and password_form.is_valid():
+            # Check for email duplication
             new_email = user_form.cleaned_data.get('email').lower()
             if User.objects.filter(email__iexact=new_email).exclude(pk=user.pk).exists():
                 user_form.add_error('email', 'This email is already used by another account.')
             else:
-                # Save user fields
+                # Save user info
                 u = user_form.save(commit=False)
                 u.email = new_email
                 u.save()
-                # Save profile (handles profile_image)
+
+                # Save profile info
                 profile_form.save()
+
+                # ✅ Handle password change (only if provided)
+                new_password = password_form.cleaned_data.get('password')
+                if new_password:
+                    u.set_password(new_password)
+                    u.save()
+                    from django.contrib.auth import update_session_auth_hash
+                    update_session_auth_hash(request, u)  # stay logged in
+                    messages.success(request, "Password updated successfully.")
+
                 messages.success(request, "Profile updated successfully.")
-                # Redirect to avoid resubmission and to reflect new image url
                 return redirect('staff_url:profile')
         else:
-            # Let template show form errors
             messages.error(request, "Please fix the errors below.")
     else:
         user_form = StaffUserForm(instance=user)
         profile_form = StaffProfileForm(instance=profile)
+        password_form = ChangePasswordForm()  # ✅ added
 
     return render(request, 'staff_design/profile.html', {
         'user_form': user_form,
         'profile_form': profile_form,
-        'profile': profile,  # for template convenience
+        'password_form': password_form,  # ✅ added
+        'profile': profile,
     })
