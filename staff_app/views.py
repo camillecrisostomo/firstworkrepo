@@ -437,7 +437,7 @@ def staff_permission_required(view_func):
 @staff_permission_required
 def post_list(request):
     posts = JobPost.objects.filter(staff=request.user, archived=False).order_by('-post_date')
-    return render(request, 'staff_design/post_list.html', {'posts': posts})
+    return render(request, 'job/post_list.html', {'posts': posts})
 
 
 @login_required
@@ -453,7 +453,7 @@ def post_create(request):
             return redirect('staff_url:post_list')
     else:
         form = JobPostForm()
-    return render(request, 'staff_design/post_form.html', {'form': form, 'create': True})
+    return render(request, 'job/post_form.html', {'form': form, 'create': True})
 
 
 @login_required
@@ -468,7 +468,7 @@ def post_edit(request, pk):
             return redirect('staff_url:post_list')
     else:
         form = JobPostForm(instance=post)
-    return render(request, 'staff_design/post_form.html', {'form': form, 'create': False, 'post': post})
+    return render(request, 'job/post_form.html', {'form': form, 'create': False, 'post': post})
 
 
 @login_required
@@ -504,7 +504,7 @@ def post_archive(request, pk):
             return redirect('staff_url:post_list')
     else:
         form = ArchiveForm()
-    return render(request, 'staff_design/post_confirm_archive.html', {'form': form, 'post': post})
+    return render(request, 'job/post_confirm_archive.html', {'form': form, 'post': post})
 
 
 @login_required
@@ -529,11 +529,34 @@ def post_delete(request, pk):
             return redirect('staff_url:post_list')
     else:
         form = DeleteForm()
-    return render(request, 'staff_design/post_confirm_delete.html', {'form': form, 'post': post})
+    return render(request, 'job/post_confirm_delete.html', {'form': form, 'post': post})
 
 
 @login_required
 @staff_permission_required
 def archived_list(request):
     archives = ArchivedJob.objects.filter(staff=request.user).order_by('-archived_date')
-    return render(request, 'staff_design/archived_list.html', {'archives': archives})
+    return render(request, 'job/archived_list.html', {'archives': archives})
+
+@login_required
+@staff_permission_required
+def post_unarchive(request, pk):
+    """
+    Unarchive a previously archived job post.
+    This sets JobPost.archived=False and deletes the ArchivedJob record.
+    """
+    archived = get_object_or_404(ArchivedJob, pk=pk, staff=request.user)
+
+    try:
+        post = JobPost.objects.get(id=archived.original_id, staff=request.user)
+        post.archived = False
+        post.save()
+
+        # Optional cleanup: remove record from ArchivedJob
+        archived.delete()
+
+        messages.success(request, "Job post successfully unarchived.")
+    except JobPost.DoesNotExist:
+        messages.error(request, "Original job post not found. Cannot unarchive.")
+
+    return redirect('staff_url:archived_list')

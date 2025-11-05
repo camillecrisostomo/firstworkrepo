@@ -6,9 +6,15 @@
   <hr>
   {% if archives %}
     <table class="table">
-      <thead><tr>
-        <th>Job #</th><th>Title</th><th>Archived Date</th><th>Reason</th>
-      </tr></thead>
+      <thead>
+        <tr>
+          <th>Job #</th>
+          <th>Title</th>
+          <th>Archived Date</th>
+          <th>Reason</th>
+          <th>Action</th> <!-- 🆕 added column for unarchive -->
+        </tr>
+      </thead>
       <tbody>
         {% for a in archives %}
           <tr>
@@ -20,6 +26,13 @@
               {% if a.archive_reason == 'other' and a.archive_reason_other %}
                 - {{ a.archive_reason_other }}
               {% endif %}
+            </td>
+            <td> <!-- 🆕 unarchive button -->
+              <a href="{% url 'staff_url:post_unarchive' a.pk %}"
+                 class="btn btn-success btn-sm"
+                 onclick="return confirm('Are you sure you want to unarchive this job post?');">
+                 Unarchive
+              </a>
             </td>
           </tr>
         {% endfor %}

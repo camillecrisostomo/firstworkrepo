@@ -26,4 +26,5 @@ urlpatterns = [
     path('posts/<int:pk>/archive/', views.post_archive, name='post_archive'),
     path('posts/<int:pk>/delete/', views.post_delete, name='post_delete'),
     path('posts/archived/', views.archived_list, name='archived_list'),
+    path('archived/unarchive/<int:pk>/', views.post_unarchive, name='post_unarchive'),
 ]

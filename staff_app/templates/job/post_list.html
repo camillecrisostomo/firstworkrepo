@@ -1,15 +1,25 @@
 {% extends "staff_maintemp/nav.html" %}
 {% block content %}
 <div class="container">
-  <h2>My Job Posts</h2>
-  <a href="{% url 'staff_url:post_create' %}" class="btn btn-primary">Create New Job Post</a>
-  <a href="{% url 'staff_url:archived_list' %}" class="btn btn-secondary">Archived Posts</a>
+  <h2>Job list</h2>
+  
+  
+    <a href="{% url 'staff_url:post_create' %}" class="btn btn-primary" style="margin-right: 15px;">Create New Job Post</a>
+    <a href="{% url 'staff_url:archived_list' %}" class="btn btn-secondary">Archived Posts</a>
+
   <hr>
   {% if posts %}
     <table class="table">
       <thead><tr>
-        <th>Job Number</th><th>Title</th><th>Position</th><th>Type</th><th>Experience</th><th>Posted</th><th>Actions</th>
+        <th>Job Number</th>
+        <th>Title</th>
+        <th>Position</th>
+        <th>Type</th>
+        <th>Experience</th>
+        <th>Posted</th>
+        <th>Actions</th>
       </tr></thead>
+      
       <tbody>
         {% for p in posts %}
           <tr>
@@ -32,4 +42,6 @@
     <p>No job posts yet.</p>
   {% endif %}
 </div>
+<hr>
+{% include "staff_maintemp/footer.html" %}
 {% endblock %}
