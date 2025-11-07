@@ -64,6 +64,7 @@ def _send_verification_email(user_email, full_name, code):
 def register_staff(request):
     if request.method == 'POST':
         form = StaffRegisterForm(request.POST)
+        
         if form.is_valid():
             first = form.cleaned_data['first_name'].strip()
             last = form.cleaned_data['last_name'].strip()
@@ -541,10 +542,7 @@ def archived_list(request):
 @login_required
 @staff_permission_required
 def post_unarchive(request, pk):
-    """
-    Unarchive a previously archived job post.
-    This sets JobPost.archived=False and deletes the ArchivedJob record.
-    """
+
     archived = get_object_or_404(ArchivedJob, pk=pk, staff=request.user)
 
     try:

@@ -15,7 +15,7 @@ def default_profile_image():
     return 'defaults/default_profile.png'  # make sure this file exists in MEDIA_ROOT/defaults/
 
 class StaffProfile(models.Model):
-    STATUS_PENDING_VERIFICATION = 'Pending Verification'
+    STATUS_PENDING_VERIFICATION = 'PV'
     STATUS_PENDING_APPROVAL = 'Pending Admin Approval'
     STATUS_APPROVED = 'Approved'
     STATUS_REJECTED = 'Rejected'

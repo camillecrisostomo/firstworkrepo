@@ -18,7 +18,7 @@
 {% endif %}
 
 <!-- ✅ Login Form -->
-<form method="post">
+<form method="post" action="{% url 'staff_url:login' %}">
     {% csrf_token %}
     
     <label>Email:</label><br>

@@ -36,7 +36,7 @@ class StaffRegisterForm(forms.Form):
         pw = cleaned.get('password')
         cpw = cleaned.get('confirm_password')
         if pw and cpw and pw != cpw:
-            raise forms.ValidationError("Passwords do not match.")
+            self.add_error('confirm_password', "Passwords do not match.")
         return cleaned
 
 class VerifyCodeForm(forms.Form):
