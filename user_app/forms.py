@@ -3,6 +3,9 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import AuthenticationForm
 import re
 from .models import UserProfile
+from staff_app.models import JobApplication
+from django.core.exceptions import ValidationError
+
 
 class RegistrationForm(forms.Form):
     first_name = forms.CharField(max_length=30, required=True)
@@ -97,3 +100,32 @@ class UserProfileForm(forms.ModelForm):
         widgets = {
             'middle_name': forms.TextInput(),
         }
+
+
+#added for submission of CV
+ALLOWED_MIME = ['application/pdf', 'image/png', 'image/jpeg']
+ALLOWED_EXT = ['.pdf', '.png', '.jpg', '.jpeg']
+MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+
+class JobApplicationForm(forms.ModelForm):
+    class Meta:
+        model = JobApplication
+        fields = ['cv']
+
+    def clean_cv(self):
+        f = self.cleaned_data.get('cv')
+        if not f:
+            raise ValidationError("CV is required.")
+        # size
+        if f.size > MAX_SIZE:
+            raise ValidationError("File too large. Max 5 MB.")
+        # content_type check (safe but not 100% foolproof)
+        content_type = f.content_type
+        if content_type not in ALLOWED_MIME:
+            raise ValidationError("Invalid file type. Allowed: pdf, png, jpeg.")
+        # extension check
+        import os
+        ext = os.path.splitext(f.name)[1].lower()
+        if ext not in ALLOWED_EXT:
+            raise ValidationError("Invalid file extension. Allowed: pdf, png, jpeg.")
+        return f

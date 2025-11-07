@@ -27,4 +27,10 @@ urlpatterns = [
     path('posts/<int:pk>/delete/', views.post_delete, name='post_delete'),
     path('posts/archived/', views.archived_list, name='archived_list'),
     path('archived/unarchive/<int:pk>/', views.post_unarchive, name='post_unarchive'),
+
+
+    #added for submission of CV
+    path('posts/<str:job_number>/applicants/', views.view_applicants, name='view_applicants'),
+    path('applications/<int:app_id>/<str:action>/', views.review_applicant, name='review_applicant'),
+    path('accepted-applicants/', views.accepted_applicants, name='accepted_applicants'),
 ]

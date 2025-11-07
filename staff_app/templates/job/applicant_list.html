@@ -1,0 +1,51 @@
+{% extends "staff_maintemp/nav.html" %}
+{% block content %}
+<h2>Applicants for {{ job.title }} ({{ job.job_number }})</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Applicant</th>
+      <th>Applied At</th>
+      <th>CV</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for app in applicants %}
+      <tr>
+        <td>{{ app.applicant.get_full_name }} ({{ app.applicant.username }})</td>
+        <td>{{ app.applied_at }}</td>
+        <td>
+          {% if app.cv %}
+            <a href="{{ app.cv.url }}" target="_blank" rel="noopener noreferrer">View CV</a>
+          {% else %}
+            No CV
+          {% endif %}
+        </td>
+        <td>{{ app.get_status_display }}</td>
+        <td>
+          {% if app.status == 'pending' %}
+            <form method="post" action="{% url 'staff_url:review_applicant' app.id 'accept' %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit">Accept</button>
+            </form>
+            <form method="post" action="{% url 'staff_url:review_applicant' app.id 'reject' %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" onclick="return confirm('Reject this applicant?')">Reject</button>
+            </form>
+          {% else %}
+            <!-- already reviewed -->
+            <span>{{ app.get_status_display }}</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No applicants yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p><a href="{% url 'staff_url:post_list' %}">Back to posts</a></p>
+{% endblock %}

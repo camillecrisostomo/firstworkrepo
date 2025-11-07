@@ -1,0 +1,20 @@
+{% extends "user_maintemp/nav.html" %}
+{% block content %}
+  <h2>Apply for {{ job.title }}</h2>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div>
+      {{ form.cv.label_tag }}<br>
+      {{ form.cv }}
+      {% for error in form.cv.errors %}
+        <div class="error">{{ error }}</div>
+      {% endfor %}
+    </div>
+
+    <button type="submit">Submit Application</button>
+  </form>
+
+  <p><a href="{% url 'user:job_detail' job.job_number %}">Back to job</a></p>
+{% endblock %}

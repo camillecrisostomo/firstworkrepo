@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 import os
 import random, string
+from datetime import timedelta
 
 # ADDED: helper for profile upload path
 def staff_profile_upload_path(instance, filename):
@@ -133,3 +134,43 @@ class DeletionLog(models.Model):
 
     def __str__(self):
         return f'DELETED {self.job_number}'
+    
+    #added for submission of CV
+
+class JobApplication(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_REJECTED, 'Rejected'),
+    ]
+
+    job = models.ForeignKey('staff_app.JobPost', on_delete=models.CASCADE, related_name='applications')
+    applicant = models.ForeignKey(User, on_delete=models.CASCADE, related_name='job_applications')
+    cv = models.FileField(upload_to='user_cvs/')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    applied_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    rejection_until = models.DateField(null=True, blank=True)  # date until applicant is blocked
+
+    class Meta:
+        unique_together = ('job', 'applicant')  # optional: one application per user per job
+
+    def __str__(self):
+        return f"{self.applicant.username} → {self.job.job_number}"
+
+    def mark_rejected(self):
+        self.status = self.STATUS_REJECTED
+        self.reviewed_at = timezone.now()
+        # approx 6 months = 182 days (adjust if you need exact month logic)
+        self.rejection_until = (timezone.now().date() + timedelta(days=182))
+        self.save()
+
+    def mark_accepted(self):
+        self.status = self.STATUS_ACCEPTED
+        self.reviewed_at = timezone.now()
+        # accepted => no rejection_until
+        self.rejection_until = None
+        self.save()

@@ -18,6 +18,11 @@ from django.urls import reverse
 #ADDED FOR JOB POSTING
 from staff_app.models import JobPost
 
+#added for submission of CV
+from staff_app.models import JobApplication
+from .forms import JobApplicationForm
+from datetime import date
+
 # helper
 def generate_code(n=6):
     return ''.join(random.choices(string.digits, k=n))
@@ -267,3 +272,55 @@ def career_search(request):
 def job_detail(request, job_number):
     post = get_object_or_404(JobPost, job_number=job_number, archived=False)
     return render(request, 'user/job_detail.html', {'post': post})
+
+
+#added for submission of CV
+@login_required
+def job_detail(request, job_number):
+    job = get_object_or_404(JobPost, job_number=job_number, archived=False)
+    # show existing application status if any
+    existing = JobApplication.objects.filter(job=job, applicant=request.user).first()
+    return render(request, 'user/job_detail.html', {'job': job, 'existing': existing})
+
+@login_required
+def apply_job(request, job_number):
+    job = get_object_or_404(JobPost, job_number=job_number, archived=False)
+
+    # Check if user currently blocked by rejection from ANY job
+    # (You said rejected can't apply for 6 months to any job)
+    active_rejection = JobApplication.objects.filter(
+        applicant=request.user,
+        status=JobApplication.STATUS_REJECTED,
+        rejection_until__gte=timezone.now().date()
+    ).exists()
+
+    if active_rejection:
+        # find the soonest date they can apply again
+        last_block = JobApplication.objects.filter(
+            applicant=request.user,
+            status=JobApplication.STATUS_REJECTED
+        ).order_by('-rejection_until').first()
+        can_apply_on = last_block.rejection_until if last_block else None
+        messages.error(request, f"You cannot apply until {can_apply_on}. Please wait 6 months from rejection.")
+        return redirect('user:job_detail', job_number=job_number)
+
+    # optional: prevent duplicate application for the same job
+    if JobApplication.objects.filter(job=job, applicant=request.user).exists():
+        messages.info(request, "You have already applied for this job.")
+        return redirect('user:job_detail', job_number=job_number)
+
+    if request.method == 'POST':
+        form = JobApplicationForm(request.POST, request.FILES)
+        if form.is_valid():
+            app = form.save(commit=False)
+            app.job = job
+            app.applicant = request.user
+            app.save()
+            messages.success(request, "Application submitted successfully.")
+            # optional: notify staff via email
+            return redirect('user:job_detail', job_number=job_number)
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = JobApplicationForm()
+    return render(request, 'user/apply_job.html', {'form': form, 'job': job})

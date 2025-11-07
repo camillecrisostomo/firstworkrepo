@@ -6,28 +6,29 @@
   <title>Job Posted</title>
 </head>
 <body>
-  {% extends "staff_maintemp/nav.html" %}
+{% extends "staff_maintemp/nav.html" %}
 {% block content %}
 <div class="container">
-  <h2>Job list</h2>
+  <h2>Job List</h2>
   
-  
-    <a href="{% url 'staff_url:post_create' %}" class="btn btn-primary" style="margin-right: 15px;">Create New Job Post</a>
-    <a href="{% url 'staff_url:archived_list' %}" class="btn btn-secondary">Archived Posts</a>
+  <a href="{% url 'staff_url:post_create' %}" class="btn btn-primary" style="margin-right: 15px;">Create New Job Post</a>
+  <a href="{% url 'staff_url:archived_list' %}" class="btn btn-secondary">Archived Posts</a>
 
   <hr>
   {% if posts %}
-    <table class="table">
-      <thead><tr>
-        <th>Job Number</th>
-        <th>Title</th>
-        <th>Position</th>
-        <th>Type</th>
-        <th>Experience</th>
-        <th>Posted</th>
-        <th>Actions</th>
-      </tr></thead>
-      
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Job Number</th>
+          <th>Title</th>
+          <th>Position</th>
+          <th>Type</th>
+          <th>Experience</th>
+          <th>Posted</th>
+          <th>Actions</th>
+          <th>Applicants</th>
+        </tr>
+      </thead>
       <tbody>
         {% for p in posts %}
           <tr>
@@ -40,7 +41,10 @@
             <td>
               <a href="{% url 'staff_url:post_edit' p.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
               <a href="{% url 'staff_url:post_archive' p.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
-              <a href="{% url 'staff_url:post_delete' p.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            </td>
+            <td>
+              <!-- ✅ Correct button for viewing applicants of this job -->
+              <a href="{% url 'staff_url:view_applicants' p.job_number %}" class="btn btn-info btn-sm">View Applicants</a>
             </td>
           </tr>
         {% endfor %}
@@ -53,6 +57,5 @@
 <hr>
 {% include "staff_maintemp/footer.html" %}
 {% endblock %}
-
 </body>
 </html>

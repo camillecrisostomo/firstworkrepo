@@ -2,33 +2,36 @@
 {% block content %}
 
 <div class="container">
-  <h2>{{ post.title }}</h2>
-  <p><strong>Job Number:</strong> {{ post.job_number }}</p>
-  <p><strong>Position:</strong> {{ post.position_title }}</p>
-  <p><strong>Type:</strong> {{ post.get_job_type_display }}</p>
-  <p><strong>Experience:</strong> {{ post.experience }}</p>
+  <h2>{{ job.title }}</h2>
+  <p><strong>Job Number:</strong> {{ job.job_number }}</p>
+  <p><strong>Position:</strong> {{ job.position_title }}</p>
+  <p><strong>Type:</strong> {{ job.get_job_type_display }}</p>
+  <p><strong>Experience:</strong> {{ job.experience }}</p>
   <hr>
+
   <h4>Job Description</h4>
-  <p>{{ post.job_description|linebreaks }}</p>
+  <p>{{ job.job_description|linebreaks }}</p>
 
   <h4>Qualification</h4>
-  <p>{{ post.qualification|linebreaks }}</p>
+  <p>{{ job.qualification|linebreaks }}</p>
 
   <h4>Location</h4>
-  <p>{{ post.location }}</p>
+  <p>{{ job.location }}</p>
 
-  {% if post.additional_info %}
+  {% if job.additional_info %}
     <h4>Additional Information</h4>
-    <p>{{ post.additional_info|linebreaks }}</p>
+    <p>{{ job.additional_info|linebreaks }}</p>
   {% endif %}
 
-  {% if post.about_company %}
+  {% if job.about_company %}
     <h4>About Company</h4>
-    <p>{{ post.about_company|linebreaks }}</p>
+    <p>{{ job.about_company|linebreaks }}</p>
   {% endif %}
 
-  <p><small>Posted: {{ post.post_date|date:"Y-m-d H:i" }}</small></p>
+  <p><small>Posted: {{ job.post_date|date:"Y-m-d H:i" }}</small></p>
+
   <a href="{% url 'user:career_search' %}" class="btn btn-secondary">Back to listings</a>
+  <a href="{% url 'user:apply_job' job.job_number %}" class="btn">Apply Now</a>
 </div>
 
 {% endblock %}

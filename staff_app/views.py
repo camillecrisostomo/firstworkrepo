@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_http_methods
 
+
 from .models import StaffProfile
 from .forms import StaffRegisterForm, VerifyCodeForm, LoginForm, ForgotPasswordForm
 from .forms import StaffUserForm, StaffProfileForm, ChangePasswordForm
@@ -20,6 +21,11 @@ from .forms import StaffUserForm, StaffProfileForm, ChangePasswordForm
 #ADDED FOR JOB POSTING
 from .forms import JobPostForm, ArchiveForm, DeleteForm
 from .models import JobPost, ArchivedJob, DeletionLog
+
+#added for submission of CV
+from .models import JobApplication
+from django.db.models import Q
+from django.http import HttpResponseForbidden
 
 # =======================
 # Configuration constants
@@ -558,3 +564,51 @@ def post_unarchive(request, pk):
         messages.error(request, "Original job post not found. Cannot unarchive.")
 
     return redirect('staff_url:archived_list')
+
+
+#Added for submission of CV
+
+@login_required
+def staff_job_list(request):
+    # list of staff's own job posts (you likely already have this)
+    posts = JobPost.objects.filter(staff=request.user, archived=False)
+    return render(request, 'job/post_list.html', {'posts': posts})
+
+@login_required
+def view_applicants(request, job_number):
+    job = get_object_or_404(JobPost, job_number=job_number, staff=request.user)
+    applicants = JobApplication.objects.filter(job=job).order_by('-applied_at')
+    return render(request, 'job/applicant_list.html', {'job': job, 'applicants': applicants})
+
+@login_required
+def review_applicant(request, app_id, action):
+    """
+    action: 'accept' or 'reject'
+    Only staff who posted the job can do this.
+    """
+    application = get_object_or_404(JobApplication, id=app_id)
+    if application.job.staff != request.user:
+        return HttpResponseForbidden("Not allowed")
+
+    if action == 'accept':
+        application.mark_accepted()
+        messages.success(request, f"{application.applicant.username} accepted.")
+    elif action == 'reject':
+        application.mark_rejected()
+        messages.success(request, f"{application.applicant.username} rejected and blocked for 6 months.")
+    else:
+        messages.error(request, "Unknown action.")
+    return redirect('staff:view_applicants', job_number=application.job.job_number)
+
+@login_required
+def accepted_applicants(request):
+    # show all accepted applicants for this staff's jobs, with search by name/job_number
+    qs = JobApplication.objects.filter(job__staff=request.user, status=JobApplication.STATUS_ACCEPTED)
+    q = request.GET.get('q')
+    if q:
+        qs = qs.filter(
+            Q(applicant__username__icontains=q) |
+            Q(job__job_number__icontains=q) |
+            Q(job__title__icontains=q)
+        )
+    return render(request, 'job/accepted_applicants.html', {'applications': qs, 'q': q})

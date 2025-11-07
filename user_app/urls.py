@@ -15,4 +15,8 @@ urlpatterns = [
     
     path('career/', views.career_search, name='career_search'),
     path('career/<str:job_number>/', views.job_detail, name='job_detail'),
+
+    #added for submission of CV
+    path('career/<str:job_number>/', views.job_detail, name='job_detail'),
+    path('career/<str:job_number>/apply/', views.apply_job, name='apply_job'),
 ]
