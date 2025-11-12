@@ -1,8 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>List of Applicants</title>
+</head>
+<body>
+  
 {% extends "staff_maintemp/nav.html" %}
 {% block content %}
 <h2>Applicants for {{ job.title }} ({{ job.job_number }})</h2>
 
-<table>
+<table border="1" cellspacing="0" cellpadding="8">
   <thead>
     <tr>
       <th>Applicant</th>
@@ -16,36 +25,53 @@
     {% for app in applicants %}
       <tr>
         <td>{{ app.applicant.get_full_name }} ({{ app.applicant.username }})</td>
-        <td>{{ app.applied_at }}</td>
+        <td>{{ app.applied_at|date:"M d, Y h:i A" }}</td>
         <td>
           {% if app.cv %}
             <a href="{{ app.cv.url }}" target="_blank" rel="noopener noreferrer">View CV</a>
           {% else %}
-            No CV
+            <span style="color: #999;">No CV</span>
           {% endif %}
         </td>
-        <td>{{ app.get_status_display }}</td>
         <td>
-          {% if app.status == 'pending' %}
-            <form method="post" action="{% url 'staff_url:review_applicant' app.id 'accept' %}" style="display:inline;">
-              {% csrf_token %}
-              <button type="submit">Accept</button>
-            </form>
-            <form method="post" action="{% url 'staff_url:review_applicant' app.id 'reject' %}" style="display:inline;">
-              {% csrf_token %}
-              <button type="submit" onclick="return confirm('Reject this applicant?')">Reject</button>
-            </form>
+          {% if app.status == 'accepted' %}
+            <span style="color: green; font-weight: bold;">Accepted</span>
+          {% elif app.status == 'rejected' %}
+            <span style="color: red; font-weight: bold;">Rejected</span>
           {% else %}
-            <!-- already reviewed -->
-            <span>{{ app.get_status_display }}</span>
+            <span style="color: #555;">Pending</span>
           {% endif %}
+        </td>
+        <td>
+          <!-- ✅ Action Buttons (toggle-based) -->
+          <form method="post" action="{% url 'staff_url:review_applicant' app.id 'accept' %}" style="display:inline;">
+            {% csrf_token %}
+            {% if app.status == 'accepted' %}
+              <button type="submit" style="background-color:#999; color:white;">Undo Accept</button>
+            {% else %}
+              <button type="submit" style="background-color:green; color:white;">Accept</button>
+            {% endif %}
+          </form>
+
+          <form method="post" action="{% url 'staff_url:review_applicant' app.id 'reject' %}" style="display:inline;">
+            {% csrf_token %}
+            {% if app.status == 'rejected' %}
+              <button type="submit" style="background-color:#999; color:white;">Undo Reject</button>
+            {% else %}
+              <button type="submit" style="background-color:red; color:white;" onclick="return confirm('Reject this applicant?')">Reject</button>
+            {% endif %}
+          </form>
         </td>
       </tr>
     {% empty %}
-      <tr><td colspan="5">No applicants yet.</td></tr>
+      <tr><td colspan="5" style="text-align:center;">No applicants yet.</td></tr>
     {% endfor %}
   </tbody>
 </table>
 
-<p><a href="{% url 'staff_url:post_list' %}">Back to posts</a></p>
+<p><a href="{% url 'staff_url:post_list' %}">← Back to job posts</a></p>
 {% endblock %}
+
+
+</body>
+</html>

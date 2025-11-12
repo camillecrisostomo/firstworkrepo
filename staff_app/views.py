@@ -584,21 +584,38 @@ def view_applicants(request, job_number):
 def review_applicant(request, app_id, action):
     """
     action: 'accept' or 'reject'
+    Allows toggling — staff can accept or reject even after a previous decision.
     Only staff who posted the job can do this.
     """
     application = get_object_or_404(JobApplication, id=app_id)
+
+    # Ensure only the job owner can act
     if application.job.staff != request.user:
         return HttpResponseForbidden("Not allowed")
 
+    # Toggle accept/reject logic
     if action == 'accept':
-        application.mark_accepted()
-        messages.success(request, f"{application.applicant.username} accepted.")
+        if application.status == JobApplication.STATUS_ACCEPTED:
+            # Already accepted, so undo it or revert to pending if you want
+            application.status = JobApplication.STATUS_PENDING
+            messages.info(request, f"{application.applicant.username}'s acceptance reverted to pending.")
+        else:
+            application.status = JobApplication.STATUS_ACCEPTED
+            messages.success(request, f"{application.applicant.username} accepted.")
     elif action == 'reject':
-        application.mark_rejected()
-        messages.success(request, f"{application.applicant.username} rejected and blocked for 6 months.")
+        if application.status == JobApplication.STATUS_REJECTED:
+            # Already rejected, so undo it or revert to pending if you want
+            application.status = JobApplication.STATUS_PENDING
+            messages.info(request, f"{application.applicant.username}'s rejection reverted to pending.")
+        else:
+            application.status = JobApplication.STATUS_REJECTED
+            messages.warning(request, f"{application.applicant.username} rejected.")
     else:
         messages.error(request, "Unknown action.")
-    return redirect('staff:view_applicants', job_number=application.job.job_number)
+        return redirect('staff_url:view_applicants', job_number=application.job.job_number)
+
+    application.save()
+    return redirect('staff_url:view_applicants', job_number=application.job.job_number)
 
 @login_required
 def accepted_applicants(request):
@@ -611,4 +628,4 @@ def accepted_applicants(request):
             Q(job__job_number__icontains=q) |
             Q(job__title__icontains=q)
         )
-    return render(request, 'job/accepted_applicants.html', {'applications': qs, 'q': q})
+    return render(request, 'job/accepted_list.html', {'applications': qs, 'q': q})

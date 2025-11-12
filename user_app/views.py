@@ -286,8 +286,13 @@ def job_detail(request, job_number):
 def apply_job(request, job_number):
     job = get_object_or_404(JobPost, job_number=job_number, archived=False)
 
+    # optional: prevent duplicate application for the same job (moved above)
+    if JobApplication.objects.filter(job=job, applicant=request.user).exists():
+        messages.info(request, "You have already applied for this job.")
+        return redirect('user:job_detail', job_number=job_number)
+
     # Check if user currently blocked by rejection from ANY job
-    # (You said rejected can't apply for 6 months to any job)
+    # (rejected applicants can't apply for 6 months)
     active_rejection = JobApplication.objects.filter(
         applicant=request.user,
         status=JobApplication.STATUS_REJECTED,
@@ -304,11 +309,7 @@ def apply_job(request, job_number):
         messages.error(request, f"You cannot apply until {can_apply_on}. Please wait 6 months from rejection.")
         return redirect('user:job_detail', job_number=job_number)
 
-    # optional: prevent duplicate application for the same job
-    if JobApplication.objects.filter(job=job, applicant=request.user).exists():
-        messages.info(request, "You have already applied for this job.")
-        return redirect('user:job_detail', job_number=job_number)
-
+    # Submit new application
     if request.method == 'POST':
         form = JobApplicationForm(request.POST, request.FILES)
         if form.is_valid():
@@ -323,4 +324,5 @@ def apply_job(request, job_number):
             messages.error(request, "Please correct the errors below.")
     else:
         form = JobApplicationForm()
+
     return render(request, 'user/apply_job.html', {'form': form, 'job': job})

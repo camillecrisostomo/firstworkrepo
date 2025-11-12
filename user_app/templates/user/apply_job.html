@@ -1,3 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CV Submission</title>
+</head>
+<body>
+
 {% extends "user_maintemp/nav.html" %}
 {% block content %}
   <h2>Apply for {{ job.title }}</h2>
@@ -18,3 +27,6 @@
 
   <p><a href="{% url 'user:job_detail' job.job_number %}">Back to job</a></p>
 {% endblock %}
+
+</body>
+</html>
