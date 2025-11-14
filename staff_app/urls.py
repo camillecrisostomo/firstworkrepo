@@ -33,4 +33,8 @@ urlpatterns = [
     path('posts/<str:job_number>/applicants/', views.view_applicants, name='view_applicants'),
     path('applications/<int:app_id>/<str:action>/', views.review_applicant, name='review_applicant'),
     path('accepted-applicants/', views.accepted_applicants, name='accepted_applicants'),
+    path('rejected-applicants/', views.rejected_applicants, name='rejected_applicants'),
+    
+    path('accepted/<int:app_id>/update/', views.update_application_status, name='update_application_status'),
+
 ]

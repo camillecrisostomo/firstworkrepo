@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Provincial Goverment of Bulacan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Provincial Government of Bulacan</title>
 </head>
 <body>
 
@@ -11,8 +12,36 @@
 
   <!-- Hero Section -->
   <div class="hero">
-    <h1 style="text-align:center;">Welcome to the Provincial Human Resource Management Office</h1>
-    <p style="text-align:center;">Streamlining the recruitment and hiring process for the Provincial Government of Bulacan.</p>
+    <h1>Welcome to the Provincial Human Resource Management Office</h1>
+    <p>Streamlining the recruitment and hiring process for the Provincial Government of Bulacan.</p>
+  </div>
+
+  <hr>
+
+  <!-- Jobs Section -->
+  <div class="jobs-section">
+    <h2>Available Job Positions</h2>
+    
+    {% if jobs %}
+      <div class="jobs-container">
+        {% for job in jobs %}
+          <div class="job-card">
+            <h3>{{ job.title }}</h3>
+            <div class="position-title">{{ job.position_title }}</div>
+            <div class="job-info"><strong>Job Type:</strong> {{ job.get_job_type_display }}</div>
+            <div class="job-info"><strong>Location:</strong> {{ job.location }}</div>
+            <div class="job-info"><strong>Experience:</strong> {{ job.experience }}</div>
+            <div class="job-info"><strong>Job Number:</strong> {{ job.job_number }}</div>
+            <div class="job-description">{{ job.job_description|truncatewords:30 }}</div>
+            <a href="{% url 'user:login' %}" class="apply-button">Apply Now</a>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="no-jobs">
+        <p>No job positions available at the moment. Please check back later.</p>
+      </div>
+    {% endif %}
   </div>
 
   <hr>

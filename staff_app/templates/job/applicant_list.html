@@ -11,6 +11,8 @@
 {% block content %}
 <h2>Applicants for {{ job.title }} ({{ job.job_number }})</h2>
 
+<p>Only pending applicants are shown here. Accepting or rejecting will move them to the appropriate list.</p>
+
 <table border="1" cellspacing="0" cellpadding="8">
   <thead>
     <tr>
@@ -43,23 +45,14 @@
           {% endif %}
         </td>
         <td>
-          <!-- ✅ Action Buttons (toggle-based) -->
           <form method="post" action="{% url 'staff_url:review_applicant' app.id 'accept' %}" style="display:inline;">
             {% csrf_token %}
-            {% if app.status == 'accepted' %}
-              <button type="submit" style="background-color:#999; color:white;">Undo Accept</button>
-            {% else %}
-              <button type="submit" style="background-color:green; color:white;">Accept</button>
-            {% endif %}
+            <button type="submit" style="background-color:green; color:white;">Accept</button>
           </form>
 
           <form method="post" action="{% url 'staff_url:review_applicant' app.id 'reject' %}" style="display:inline;">
             {% csrf_token %}
-            {% if app.status == 'rejected' %}
-              <button type="submit" style="background-color:#999; color:white;">Undo Reject</button>
-            {% else %}
-              <button type="submit" style="background-color:red; color:white;" onclick="return confirm('Reject this applicant?')">Reject</button>
-            {% endif %}
+            <button type="submit" style="background-color:red; color:white;" onclick="return confirm('Reject this applicant?')">Reject</button>
           </form>
         </td>
       </tr>

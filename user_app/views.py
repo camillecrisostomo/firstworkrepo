@@ -160,7 +160,29 @@ def login_view(request):
 
 @login_required
 def dashboard_view(request):
-    return render(request, 'user/dashboard.html')
+    applications = JobApplication.objects.filter(applicant=request.user).order_by('-applied_at')
+
+    q = request.GET.get('q')
+    if q:
+        applications = applications.filter(
+            Q(job__title__icontains=q) |
+            Q(job__job_number__icontains=q)
+        )
+
+    return render(request, 'user/dashboard.html', {
+        'applications': applications,
+        'q': q
+    })
+
+@login_required
+def remove_application(request, app_id):
+    application = get_object_or_404(JobApplication, id=app_id, applicant=request.user)
+    if request.method == 'POST':
+        application.delete()
+        messages.success(request, "Your application has been removed.")
+    else:
+        messages.error(request, "Invalid request.")
+    return redirect('user:dashboard')
 
 def logout_view(request):
     logout(request)

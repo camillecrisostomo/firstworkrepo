@@ -1,14 +1,98 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Dashboard</title>
-</head>
-<body>
-  {% include "user_maintemp/nav.html" %}
-  <div class="container mt-4">
-    <h3>Welcome, {{ request.user.username }}</h3>
-    <p>This is your landing/dashboard.</p>
-  </div>
-</body>
-</html>
+{% extends "user_maintemp/nav.html" %}
+
+{% block content %}
+<style>
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropdown button {
+    padding: 6px 12px;
+    cursor: pointer;
+}
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #fff;
+    min-width: 160px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    border: 1px solid #ddd;
+    z-index: 1;
+}
+.dropdown-content a,
+.dropdown-content span,
+.dropdown-content button {
+    color: #333;
+    padding: 8px 12px;
+    text-decoration: none;
+    display: block;
+}
+.dropdown-content button {
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+.dropdown-content button.danger {
+    color: #b00020;
+}
+.dropdown-content a:hover {
+    background-color: #f5f5f5;
+}
+.dropdown-content button:hover {
+    background-color: #f5f5f5;
+}
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+</style>
+<div class="container">
+    <h2>Welcome, {{ request.user.get_full_name|default:request.user.username }}</h2>
+
+    <h3>My Job Applications</h3>
+
+    <table border="1" cellpadding="5" cellspacing="0">
+        <thead>
+            <tr>
+                <th>Job Title</th>
+                <th>Job Number</th>
+                <th>My Application Status</th>
+                <th>Date Submitted</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in applications %}
+                <tr>
+                    <td>{{ app.job.title }}</td>
+                    <td>{{ app.job.job_number }}</td>
+                    <td>{{ app.get_status_display }}</td>
+                    <td>{{ app.applied_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                        <div class="dropdown">
+                            <button type="button">Actions ▾</button>
+                            <div class="dropdown-content">
+                                {% if app.cv %}
+                                    <a href="{{ app.cv.url }}" target="_blank" rel="noopener noreferrer">View my application</a>
+                                {% else %}
+                                    <span>No CV uploaded</span>
+                                {% endif %}
+                                <form method="post" action="{% url 'user:remove_application' app.id %}" onsubmit="return confirm('Remove this application?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="danger">Remove my application</button>
+                                </form>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5">You have not applied to any jobs yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

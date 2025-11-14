@@ -2,14 +2,14 @@
 
 {% block content %}
 
-<h2>Pipeline / Accepted Applicants</h2>
+<h2>Rejected Applicants</h2>
 
 <div style="margin-bottom:15px;">
-  <a href="{% url 'staff_url:post_list' %}">Back to job posts</a> |
-  <a href="{% url 'staff_url:rejected_applicants' %}">View rejected applicants</a>
+  <a href="{% url 'staff_url:accepted_applicants' %}">View pipeline / accepted applicants</a> |
+  <a href="{% url 'staff_url:post_list' %}">Back to job posts</a>
 </div>
 
-<p>Manage applicants who have moved past the pending stage. Update their status to move them through the hiring pipeline or send them to the rejected list.</p>
+<p>These applicants have been rejected. Use Undo to move them back to the pending applicant list.</p>
 
 <form method="get">
   <input type="text" name="q" placeholder="Search name or job number" value="{{ q }}">
@@ -36,22 +36,17 @@
         <td>{{ app.applied_at }}</td>
         <td>{{ app.reviewed_at }}</td>
         <td>
-          <form method="post" action="{% url 'staff_url:update_application_status' app.id %}">
+          <form method="post" action="{% url 'staff_url:review_applicant' app.id 'undo_reject' %}" onsubmit="return confirm('Move this applicant back to pending?');">
             {% csrf_token %}
-            <input type="hidden" name="next" value="{% url 'staff_url:accepted_applicants' %}">
-            <select name="status">
-              {% for key, value in app.STATUS_CHOICES %}
-                <option value="{{ key }}" {% if app.status == key %}selected{% endif %}>{{ value }}</option>
-              {% endfor %}
-            </select>
-            <button type="submit">Update</button>
+            <button type="submit">Undo</button>
           </form>
         </td>
       </tr>
     {% empty %}
-      <tr><td colspan="6">No applicants yet.</td></tr>
+      <tr><td colspan="6">No rejected applicants.</td></tr>
     {% endfor %}
   </tbody>
 </table>
 
 {% endblock %}
+

@@ -12,6 +12,8 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
 
 from .models import StaffProfile
@@ -26,6 +28,16 @@ from .models import JobPost, ArchivedJob, DeletionLog
 from .models import JobApplication
 from django.db.models import Q
 from django.http import HttpResponseForbidden
+
+# Status groupings
+PIPELINE_STATUSES = [
+    JobApplication.STATUS_ACCEPTED,
+    JobApplication.STATUS_UNDER_REVIEW,
+    JobApplication.STATUS_INTERVIEW_SCHEDULED,
+    JobApplication.STATUS_INTERVIEWED,
+    JobApplication.STATUS_ASSESSMENT_SCHEDULED,
+    JobApplication.STATUS_ASSESSMENT_COMPLETED,
+]
 
 # =======================
 # Configuration constants
@@ -63,6 +75,18 @@ def _send_verification_email(user_email, full_name, code):
     from_email = settings.DEFAULT_FROM_EMAIL
     send_mail(subject, message, from_email, [user_email], fail_silently=False)
 
+
+def staff_permission_required(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('user:login')  # applicant login
+        profile = getattr(request.user, 'staff_profile', None)
+        if not profile or profile.status != StaffProfile.STATUS_APPROVED:
+            messages.error(request, 'You are not allowed to access this page.')
+            return redirect('user:login')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
 
 # =======================
 # Registration + Verification
@@ -569,18 +593,24 @@ def post_unarchive(request, pk):
 #Added for submission of CV
 
 @login_required
+@staff_permission_required
 def staff_job_list(request):
     # list of staff's own job posts (you likely already have this)
     posts = JobPost.objects.filter(staff=request.user, archived=False)
     return render(request, 'job/post_list.html', {'posts': posts})
 
 @login_required
+@staff_permission_required
 def view_applicants(request, job_number):
     job = get_object_or_404(JobPost, job_number=job_number, staff=request.user)
-    applicants = JobApplication.objects.filter(job=job).order_by('-applied_at')
+    applicants = JobApplication.objects.filter(
+        job=job,
+        status=JobApplication.STATUS_PENDING
+    ).order_by('-applied_at')
     return render(request, 'job/applicant_list.html', {'job': job, 'applicants': applicants})
 
 @login_required
+@staff_permission_required
 def review_applicant(request, app_id, action):
     """
     action: 'accept' or 'reject'
@@ -593,34 +623,34 @@ def review_applicant(request, app_id, action):
     if application.job.staff != request.user:
         return HttpResponseForbidden("Not allowed")
 
-    # Toggle accept/reject logic
+    next_url = request.POST.get('next')
+
+    # Move applicant through stages
     if action == 'accept':
-        if application.status == JobApplication.STATUS_ACCEPTED:
-            # Already accepted, so undo it or revert to pending if you want
-            application.status = JobApplication.STATUS_PENDING
-            messages.info(request, f"{application.applicant.username}'s acceptance reverted to pending.")
-        else:
-            application.status = JobApplication.STATUS_ACCEPTED
-            messages.success(request, f"{application.applicant.username} accepted.")
+        application.mark_accepted()
+        messages.success(request, f"{application.applicant.username} accepted.")
     elif action == 'reject':
-        if application.status == JobApplication.STATUS_REJECTED:
-            # Already rejected, so undo it or revert to pending if you want
-            application.status = JobApplication.STATUS_PENDING
-            messages.info(request, f"{application.applicant.username}'s rejection reverted to pending.")
-        else:
-            application.status = JobApplication.STATUS_REJECTED
-            messages.warning(request, f"{application.applicant.username} rejected.")
+        application.mark_rejected()
+        messages.warning(request, f"{application.applicant.username} rejected.")
+    elif action == 'undo_reject':
+        application.status = JobApplication.STATUS_PENDING
+        application.reviewed_at = None
+        application.rejection_until = None
+        application.save()
+        messages.success(request, f"{application.applicant.username} moved back to applicants list.")
     else:
         messages.error(request, "Unknown action.")
-        return redirect('staff_url:view_applicants', job_number=application.job.job_number)
+        next_url = None
 
-    application.save()
-    return redirect('staff_url:view_applicants', job_number=application.job.job_number)
-
+    redirect_url = next_url or reverse('staff_url:view_applicants', kwargs={'job_number': application.job.job_number})
+    return redirect(redirect_url)
 @login_required
+@staff_permission_required
 def accepted_applicants(request):
-    # show all accepted applicants for this staff's jobs, with search by name/job_number
-    qs = JobApplication.objects.filter(job__staff=request.user, status=JobApplication.STATUS_ACCEPTED)
+    """
+    Show all applicants for this staff's jobs with status tracking and search.
+    """
+    qs = JobApplication.objects.filter(job__staff=request.user, status__in=PIPELINE_STATUSES)
     q = request.GET.get('q')
     if q:
         qs = qs.filter(
@@ -629,3 +659,105 @@ def accepted_applicants(request):
             Q(job__title__icontains=q)
         )
     return render(request, 'job/accepted_list.html', {'applications': qs, 'q': q})
+
+@login_required
+@staff_permission_required
+def rejected_applicants(request):
+    qs = JobApplication.objects.filter(job__staff=request.user, status=JobApplication.STATUS_REJECTED)
+    q = request.GET.get('q')
+    if q:
+        qs = qs.filter(
+            Q(applicant__username__icontains=q) |
+            Q(job__job_number__icontains=q) |
+            Q(job__title__icontains=q)
+        )
+    return render(request, 'job/rejected_list.html', {'applications': qs, 'q': q})
+
+# =======================
+# Updated staff_app/views.py changes
+# =======================
+
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+
+# =======================
+# Decorator to ensure staff-only access
+# =======================
+def staff_permission_required(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('user:login')  # applicant login
+        profile = getattr(request.user, 'staff_profile', None)
+        if not profile or profile.status != StaffProfile.STATUS_APPROVED:
+            messages.error(request, 'You are not allowed to access this page.')
+            return redirect('user:login')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+# =======================
+# Updated: update_application_status
+# =======================
+@login_required
+@staff_permission_required
+@require_POST  # ✅ Ensure only POST request allowed
+def update_application_status(request, app_id):
+    """
+    Update the status of a job applicant. Only job owner (staff) can update.
+    Separated from applicant session to avoid login mix-up.
+    """
+    application = get_object_or_404(JobApplication, id=app_id)
+
+    # Only the staff who posted the job can update
+    if application.job.staff != request.user:
+        return HttpResponseForbidden("Not allowed")
+
+    new_status = request.POST.get('status')
+    if new_status not in dict(JobApplication.STATUS_CHOICES).keys():
+        messages.error(request, "Invalid status selected.")
+        return redirect('staff_url:accepted_applicants')
+
+    old_status = application.status
+    application.status = new_status
+    application.reviewed_at = timezone.now()
+    application.save()
+
+    messages.success(
+        request,
+        f"{application.applicant.get_full_name()}'s status updated from {old_status} to {new_status}."
+    )
+
+    next_url = request.POST.get('next')
+    if next_url:
+        return redirect(next_url)
+    return redirect('staff_url:accepted_applicants')
+
+# =======================
+# Optional: AJAX version (recommended)
+# =======================
+@login_required
+@staff_permission_required
+@require_POST
+def update_application_status_ajax(request, app_id):
+    """
+    AJAX-safe status update. Returns JSON instead of full page redirect.
+    Prevents session mix-up when staff updates applicant status.
+    """
+    application = get_object_or_404(JobApplication, id=app_id)
+    if application.job.staff != request.user:
+        return JsonResponse({'error': 'Not allowed'}, status=403)
+
+    new_status = request.POST.get('status')
+    if new_status not in dict(JobApplication.STATUS_CHOICES).keys():
+        return JsonResponse({'error': 'Invalid status'}, status=400)
+
+    old_status = application.status
+    application.status = new_status
+    application.reviewed_at = timezone.now()
+    application.save()
+
+    return JsonResponse({
+        'message': f"{application.applicant.get_full_name()}'s status updated from {old_status} to {new_status}.",
+        'new_status': new_status
+    })

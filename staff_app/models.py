@@ -139,10 +139,21 @@ class DeletionLog(models.Model):
 
 class JobApplication(models.Model):
     STATUS_PENDING = 'pending'
+    STATUS_UNDER_REVIEW = 'under_review'
+    STATUS_INTERVIEW_SCHEDULED = 'interview_scheduled'
+    STATUS_INTERVIEWED = 'interviewed'
+    STATUS_ASSESSMENT_SCHEDULED = 'assessment_scheduled'
+    STATUS_ASSESSMENT_COMPLETED = 'assessment_completed'
     STATUS_ACCEPTED = 'accepted'
     STATUS_REJECTED = 'rejected'
+
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
+        (STATUS_UNDER_REVIEW, 'Under Review'),
+        (STATUS_INTERVIEW_SCHEDULED, 'Interview Scheduled'),
+        (STATUS_INTERVIEWED, 'Interviewed'),
+        (STATUS_ASSESSMENT_SCHEDULED, 'Assessment Scheduled'),
+        (STATUS_ASSESSMENT_COMPLETED, 'Assessment Completed'),
         (STATUS_ACCEPTED, 'Accepted'),
         (STATUS_REJECTED, 'Rejected'),
     ]
@@ -153,7 +164,7 @@ class JobApplication(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     applied_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
-    rejection_until = models.DateField(null=True, blank=True)  # date until applicant is blocked
+    rejection_until = models.DateField(null=True, blank=True)
 
     class Meta:
         unique_together = ('job', 'applicant')  # optional: one application per user per job
